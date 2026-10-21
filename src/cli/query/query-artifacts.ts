@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import type { QueryManifest, QueryScopeEntry, QuerySourceGroup } from './query-manifest.js';
 import { buildArchIndex } from './arch-index-builder.js';
 import { canonicalizeArchJson } from '../utils/canonicalize-arch-json.js';
+import { hashSources, realpathOrSelf } from '../processors/arch-json-utils.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 /**
@@ -97,6 +98,93 @@ function selectGlobalScopeKey(entries: QueryScopeEntry[]): string | undefined {
 }
 
 // ---------------------------------------------------------------------------
+// Identity normalization for existing manifest entries
+// ---------------------------------------------------------------------------
+
+/** A manifest entry whose identity has been re-derived from the filesystem. */
+interface NormalizedEntry {
+  /** Canonical manifest entry (key/sources replaced by their normalized form). */
+  entry: QueryScopeEntry;
+  /** The key the entry was stored under before normalization. */
+  previousKey: string;
+}
+
+/**
+ * Re-derive an existing manifest entry's identity from the filesystem.
+ *
+ * Legacy manifests accumulated duplicate identities for the same directory:
+ * a relative route (`packages/quay/src`), a symlinked route
+ * (`/home/...` → `/data/...`) and the current absolute route each hashed to a
+ * different key because the key used to be computed from the raw string. The
+ * new-scope path already realpath-normalizes before hashing (see
+ * `hashSources`), but old entries were never re-normalized, so re-analysis
+ * kept appending instead of replacing.
+ *
+ * Rules:
+ * - Relative sources (written by pre-workDir-aware versions) are resolved
+ *   against the project root, i.e. the parent of `.archguard`.
+ * - Every source must resolve; an entry with at least one missing source is
+ *   treated as stale and dropped from the manifest (see `persistQueryScopes`).
+ *   We chose removal over a `stale` marker so `availableScopes` never lists a
+ *   scope whose `arch.json` would depend on a vanished directory.
+ * - The canonical key uses the same formula as new scopes
+ *   (`hashSources(realpathSources, language)`), so a legacy entry lands on
+ *   exactly the key a fresh analysis of the same directory would produce.
+ */
+async function normalizeManifestEntry(
+  entry: QueryScopeEntry,
+  projectRoot: string
+): Promise<NormalizedEntry | null> {
+  if (!entry.sources || entry.sources.length === 0) return null;
+
+  const canonicalSources: string[] = [];
+  for (const source of entry.sources) {
+    const absolute = path.isAbsolute(source) ? source : path.resolve(projectRoot, source);
+    if (!(await fs.pathExists(absolute))) return null;
+    canonicalSources.push(realpathOrSelf(absolute));
+  }
+
+  const key = hashSources(canonicalSources, entry.language);
+  return {
+    entry: { ...entry, key, sources: canonicalSources },
+    previousKey: entry.key,
+  };
+}
+
+/**
+ * Rank two entries that resolved to the same canonical identity.
+ * Returns true when `a` should win over `b`:
+ *  1. entries with a `generatedAt` beat legacy entries without one,
+ *  2. the newest `generatedAt` wins,
+ *  3. a directly parsed scope beats a derived one,
+ *  4. the richer (more entities) scope wins,
+ *  5. key order is the final deterministic tie-break.
+ */
+function prefersOver(a: QueryScopeEntry, b: QueryScopeEntry): boolean {
+  const aTime = a.generatedAt ? Date.parse(a.generatedAt) : NaN;
+  const bTime = b.generatedAt ? Date.parse(b.generatedAt) : NaN;
+  const aDated = !Number.isNaN(aTime);
+  const bDated = !Number.isNaN(bTime);
+  if (aDated !== bDated) return aDated;
+  if (aDated && bDated && aTime !== bTime) return aTime > bTime;
+  if ((a.kind === 'parsed') !== (b.kind === 'parsed')) return a.kind === 'parsed';
+  if (a.entityCount !== b.entityCount) return a.entityCount > b.entityCount;
+  return a.key.localeCompare(b.key) < 0;
+}
+
+/**
+ * A canonical identity and the on-disk directories the entries in that
+ * identity used to occupy (legacy keys included).
+ */
+interface MergedIdentity {
+  entry: QueryScopeEntry;
+  /** Key whose `arch.json` belongs to the winning entry (may be a legacy key). */
+  dataKey: string;
+  /** Every key previously used for this identity (including the canonical one). */
+  previousKeys: Set<string>;
+}
+
+// ---------------------------------------------------------------------------
 // Persist query scopes + manifest
 // ---------------------------------------------------------------------------
 
@@ -115,6 +203,16 @@ function selectGlobalScopeKey(entries: QueryScopeEntry[]): string | undefined {
  * fails to write, a warning is logged and the remaining scopes are
  * still processed. The manifest only contains entries for successfully
  * written scopes.
+ *
+ * Existing manifest entries are re-normalized on every merge pass:
+ * - their `sources` are resolved to absolute realpaths (relative legacy
+ *   routes against the project root, i.e. the parent of `.archguard`) and
+ *   their key is recomputed with the same formula new scopes use;
+ * - entries that land on the same identity collapse into one (newest /
+ *   richest wins), and superseded `query/<oldKey>/` directories are removed;
+ * - entries whose sources no longer exist are dropped (not marked stale), so
+ *   they disappear from `availableScopes`;
+ * - scopes with genuinely different source sets keep their own identity.
  *
  * @param workDir  Base output directory (defaults to `.archguard` if falsy).
  * @param scopes   Scopes to persist.
@@ -161,12 +259,86 @@ export async function persistQueryScopes(
           .catch(() => null)) as QueryManifest | null)
       : null;
 
-  const mergedEntries = new Map<string, QueryScopeEntry>();
+  // Re-derive the identity of every existing entry from the filesystem before
+  // merging. Legacy manifests registered the same directory under a relative
+  // route, a symlinked route and the current absolute route; normalizing makes
+  // those collapse onto the key a fresh analysis would compute, so re-analysis
+  // replaces instead of accumulating.
+  const projectRoot = path.dirname(path.resolve(resolvedDir));
+  const identities = new Map<string, MergedIdentity>();
   for (const entry of existingManifest?.scopes ?? []) {
-    mergedEntries.set(entry.key, entry);
+    const normalized = await normalizeManifestEntry(entry, projectRoot);
+    if (!normalized) {
+      // All-sources-missing (or empty) entries are stale: drop them so they
+      // disappear from availableScopes instead of lingering forever.
+      console.warn(
+        `[query-artifacts] Dropping stale scope "${entry.key}" (sources no longer exist): ${entry.sources.join(', ')}`
+      );
+      continue;
+    }
+    const current = identities.get(normalized.entry.key);
+    if (!current) {
+      identities.set(normalized.entry.key, {
+        entry: normalized.entry,
+        dataKey: normalized.previousKey,
+        previousKeys: new Set([normalized.previousKey]),
+      });
+      continue;
+    }
+    current.previousKeys.add(normalized.previousKey);
+    if (prefersOver(normalized.entry, current.entry)) {
+      current.entry = normalized.entry;
+      current.dataKey = normalized.previousKey;
+    }
   }
+
+  // This run's freshly written scopes win over any existing entry with the same
+  // canonical key: their ArchJSON is the current parse, not a previous one.
   for (const entry of writtenEntries) {
-    mergedEntries.set(entry.key, entry);
+    const current = identities.get(entry.key);
+    identities.set(entry.key, {
+      entry,
+      dataKey: entry.key,
+      previousKeys: current?.previousKeys ?? new Set<string>(),
+    });
+  }
+
+  // Materialize the canonical directory for each retained identity. Copies (not
+  // moves) keep the old manifest/disk pair consistent if we crash before the
+  // manifest is rewritten; the legacy dirs are removed afterwards.
+  for (const [canonicalKey, identity] of identities) {
+    const canonicalDir = path.join(queryDir, canonicalKey);
+    const canonicalHasData = await fs.pathExists(path.join(canonicalDir, 'arch.json'));
+
+    let dataDir: string | null = null;
+    for (const candidate of [identity.dataKey, ...identity.previousKeys]) {
+      if (candidate === canonicalKey) {
+        if (canonicalHasData) {
+          dataDir = canonicalKey;
+          break;
+        }
+      } else if (await fs.pathExists(path.join(queryDir, candidate, 'arch.json'))) {
+        dataDir = candidate;
+        break;
+      }
+    }
+    if (dataDir === null && canonicalHasData) dataDir = canonicalKey;
+
+    if (dataDir === null) {
+      // No payload anywhere: the entry cannot be queried, so do not advertise it.
+      console.warn(
+        `[query-artifacts] Dropping unreachable scope "${canonicalKey}" (no arch.json on disk)`
+      );
+      identities.delete(canonicalKey);
+    } else if (dataDir !== canonicalKey) {
+      await fs.remove(canonicalDir);
+      await fs.copy(path.join(queryDir, dataDir), canonicalDir);
+    }
+  }
+
+  const mergedEntries = new Map<string, QueryScopeEntry>();
+  for (const [key, identity] of identities) {
+    mergedEntries.set(key, identity.entry);
   }
 
   const mergedList = Array.from(mergedEntries.values()).sort((a, b) => a.key.localeCompare(b.key));
@@ -184,8 +356,29 @@ export async function persistQueryScopes(
     scopes: mergedList,
   };
 
+  // Manifest first: a crash mid-way leaves orphan directories, never dangling
+  // entries (same ordering guarantee as pruneQueryScopes).
   const manifestPath = path.join(queryDir, 'manifest.json');
   await atomicWriteFile(manifestPath, JSON.stringify(manifest, null, 2));
+
+  // Now remove every superseded legacy directory, then any unreferenced
+  // 8-hex scope directory (auxiliary dirs such as `duplicates` / `git-history`
+  // do not match the key shape and are left untouched).
+  for (const [canonicalKey, identity] of identities) {
+    for (const previousKey of identity.previousKeys) {
+      if (previousKey !== canonicalKey) {
+        await fs.remove(path.join(queryDir, previousKey));
+      }
+    }
+  }
+  const retainedKeys = new Set(identities.keys());
+  for (const dirent of await fs.readdir(queryDir, { withFileTypes: true })) {
+    if (!dirent.isDirectory()) continue;
+    if (/^[0-9a-f]{8}$/.test(dirent.name) && !retainedKeys.has(dirent.name)) {
+      await fs.remove(path.join(queryDir, dirent.name));
+    }
+  }
+
   return writtenEntries;
 }
 
