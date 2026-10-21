@@ -583,3 +583,42 @@ describe('TypeScriptParser — qualifyRelations post-pass (Phase B fix)', () => 
     expect(rel?.target).toBe('source.ts.Base');
   });
 });
+
+describe('TypeScriptParser - method-level call edge dedup (gap-call-edge-dedup-collapses-method-edges)', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'archguard-call-dedup-'));
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('keeps one call edge per calling method when two methods call the same target method', () => {
+    mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+    writeFileSync(path.join(tmpDir, 'src', 'b.ts'), 'export class B { x(): void {} }');
+    writeFileSync(
+      path.join(tmpDir, 'src', 'a.ts'),
+      [
+        "import { B } from './b.js';",
+        'export class A {',
+        '  private b: B;',
+        '  constructor(b: B) { this.b = b; }',
+        '  m1(): void { this.b.x(); }',
+        '  m2(): void { this.b.x(); }',
+        '}',
+      ].join('\n')
+    );
+
+    const parser = new TypeScriptParser(tmpDir);
+    const result = parser.parseProject(tmpDir, 'src/**/*.ts');
+
+    const callEdges = result.relations.filter(
+      (r) => r.type === 'call' && r.target === 'src/b.ts.B' && r.targetMethod === 'x'
+    );
+    // Before the fix the class-level dedup key collapsed these into one edge.
+    expect(callEdges).toHaveLength(2);
+    expect(callEdges.map((r) => r.sourceMethod).sort()).toEqual(['m1', 'm2']);
+  });
+});

@@ -249,3 +249,19 @@ describe('QueryEngine.findCallers()', () => {
     });
   });
 });
+
+describe('QueryEngine.findCallers() - all calling methods (gap-call-edge-dedup-collapses-method-edges)', () => {
+  it('returns every calling method when several methods of one class call the same target method', () => {
+    const entities = [makeEntity('pkg.A', 'A'), makeEntity('pkg.B', 'B')];
+    const relations = [
+      makeCallEdge('pkg.A', 'pkg.B', 'init', 'readFor', 'direct'),
+      makeCallEdge('pkg.A', 'pkg.B', 'boundary', 'readFor', 'direct'),
+      makeCallEdge('pkg.A', 'pkg.B', 'finalize', 'readFor', 'direct'),
+    ];
+    const engine = makeEngine(entities, relations);
+
+    const callers = engine.relationQueryService.findCallers('B.readFor', 1);
+
+    expect(callers.map((c) => c.callerMethod).sort()).toEqual(['boundary', 'finalize', 'init']);
+  });
+});

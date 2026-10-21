@@ -42,6 +42,7 @@ import { EnumExtractor } from './enum-extractor';
 import { RelationExtractor } from './relation-extractor';
 import { FunctionExtractor } from './function-extractor';
 import { CallEdgeExtractor } from './call-edge-extractor.js';
+import { deduplicateRelations } from './relation-dedup.js';
 import type { ArchJSON, Entity, Relation } from '@/types';
 import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 
@@ -298,7 +299,7 @@ export class TypeScriptParser {
     }
 
     // Deduplicate relations (call edges merged in before dedup)
-    const uniqueRelations = this.deduplicateRelations([...filtered.relations, ...callEdges]);
+    const uniqueRelations = deduplicateRelations([...filtered.relations, ...callEdges]);
 
     return {
       ...filtered,
@@ -383,26 +384,6 @@ export class TypeScriptParser {
     });
 
     return { ...merged, relations: filteredRelations };
-  }
-
-  /**
-   * Remove duplicate relations
-   * @param relations - Array of relations
-   * @returns Deduplicated array of relations
-   */
-  private deduplicateRelations(relations: Relation[]): Relation[] {
-    const seen = new Set<string>();
-    const unique: Relation[] = [];
-
-    for (const relation of relations) {
-      const key = `${relation.type}:${relation.source}:${relation.target}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push(relation);
-      }
-    }
-
-    return unique;
   }
 
   /**

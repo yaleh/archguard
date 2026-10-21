@@ -7,6 +7,7 @@ import { EventEmitter } from 'events';
 import os from 'os';
 import pLimit from 'p-limit';
 import { TypeScriptParser } from './typescript-parser';
+import { deduplicateRelations } from './relation-dedup.js';
 import type { ArchJSON, Entity, Relation } from '@/types';
 import { ARCHJSON_SCHEMA_VERSION } from '@/types/index.js';
 import fs from 'fs/promises';
@@ -356,7 +357,7 @@ export class ParallelParser extends EventEmitter implements IParserFacade {
     }
 
     // Deduplicate relations
-    const uniqueRelations = this.deduplicateRelations(allRelations);
+    const uniqueRelations = deduplicateRelations(allRelations);
 
     return {
       version: ARCHJSON_SCHEMA_VERSION,
@@ -367,27 +368,6 @@ export class ParallelParser extends EventEmitter implements IParserFacade {
       relations: uniqueRelations,
       workspaceRoot: this.workspaceRoot,
     };
-  }
-
-  /**
-   * Remove duplicate relations
-   *
-   * @param relations - Array of relations
-   * @returns Deduplicated array
-   */
-  private deduplicateRelations(relations: Relation[]): Relation[] {
-    const seen = new Set<string>();
-    const unique: Relation[] = [];
-
-    for (const relation of relations) {
-      const key = `${relation.type}:${relation.source}:${relation.target}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push(relation);
-      }
-    }
-
-    return unique;
   }
 
   /**

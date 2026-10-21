@@ -232,3 +232,31 @@ describe('CallEdgeExtractor', () => {
     expect(callEdge.target).toBe('src/service.ts.Repo');
   });
 });
+
+describe('CallEdgeExtractor - multiple calling methods', () => {
+  it('emits one edge per calling method when both call the same target method', () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    project.createSourceFile('/workspace/b.ts', 'export class B { x(): void {} }');
+    project.createSourceFile(
+      '/workspace/a.ts',
+      `
+      import { B } from './b.js';
+      export class A {
+        private b: B;
+        constructor(b: B) { this.b = b; }
+        m1(): void { this.b.x(); }
+        m2(): void { this.b.x(); }
+      }
+    `
+    );
+    const entities = [
+      { id: 'b.ts.B', name: 'B' } as any,
+      { id: 'a.ts.A', name: 'A' } as any,
+    ];
+    const extractor = new CallEdgeExtractor(project, entities, '/workspace');
+    const callEdges = extractor.extractAll().filter((r) => r.type === 'call');
+
+    expect(callEdges).toHaveLength(2);
+    expect(callEdges.map((r) => r.sourceMethod).sort()).toEqual(['m1', 'm2']);
+  });
+});
