@@ -5,6 +5,26 @@ All notable changes to ArchGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.42] - 2026-10-21
+
+### Added
+
+- **PlantUML 输出（确定性 emit-only）** — 新增 `-f plantuml` 格式，从 ArchJSON 确定性生成 `.puml`
+  类图（`@startuml`/`@enduml` 包裹、实体/成员/关系发射、含空格分组名走 `"..." as` 别名），无 LLM、
+  无渲染依赖；配套 `PlantUmlStructuralValidator`（关系端点只引用已定义实体、拒绝泛型非法声明）。
+- **多输出格式选择** — `format` 单值统一为 `formats` 数组，CLI（`-f` 可重复）/配置文件/MCP 三入口
+  同构；`resolveFormats()` 单一归一（CLI/MCP > 每 diagram > 全局 > 默认，覆盖不并集）；一次运行可
+  同时产出 `.puml` 与 `.mmd`/`.svg`/`.png`。
+
+### Fixed
+
+- **TS 解析器 call-edge** — 调用边在方法粒度去重；函数实体及 declaration-resolved 调用边入图。
+- **TS 解析器 HOC** — `export const X = memo(<NamedFunction>)` 内层具名函数引用不再漏实体。
+- **Mermaid 类图确定性** — 实体按 canonical id|name 排序、输出与发现顺序无关、目录层级保留。
+- **query scope 归一** — persist 时归一 scope 身份，重复分析替换而非累积。
+- **默认排除共享** — discovery/config/plugin 三处共享默认排除，dist/vendor/archive 不再进图。
+- **manifest 合并** — partial analyze 多次运行合并 manifest，逐 diagram 记录输出。
+
 ## [0.1.41] - 2026-10-20
 
 ### Added
