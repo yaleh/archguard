@@ -311,10 +311,10 @@ describe('detectCppProjectStructure', () => {
     expect(result.every((d) => d.language === 'cpp')).toBe(true);
   });
 
-  it('passes format option through to all DiagramConfigs', async () => {
+  it('passes formats option through to all DiagramConfigs', async () => {
     root = await makeTempTree({ 'src/a.cpp': '' });
-    const result = await detectCppProjectStructure(root, 'proj', { format: 'json' });
-    expect(result.every((d) => d.format === 'json')).toBe(true);
+    const result = await detectCppProjectStructure(root, 'proj', { formats: ['json'] });
+    expect(result.every((d) => d.formats?.join(',') === 'json')).toBe(true);
   });
 
   it('passes exclude option through to all DiagramConfigs', async () => {

@@ -59,7 +59,7 @@ export class CommandRunner {
   await fs.writeJson(path.join(workspaceRoot, 'archguard.config.json'), {
     workDir: './.archguard',
     outputDir: './.archguard/output',
-    format: 'mermaid',
+    formats: ['mermaid'],
     mermaid: {
       renderer: 'isomorphic',
       theme: 'default',

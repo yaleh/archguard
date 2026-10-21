@@ -17,8 +17,7 @@ vi.mock('@/parser/archjson-aggregator.js');
 vi.mock('@/parser/metrics-calculator.js');
 vi.mock('@/cli/utils/output-path-resolver.js');
 vi.mock('@/cli/processors/diagram-output-router.js', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@/cli/processors/diagram-output-router.js')>();
+  const actual = await importOriginal<typeof import('@/cli/processors/diagram-output-router.js')>();
   // Keep the real pure helper (the pipeline runner calls it directly); mock only
   // the router class, whose behaviour each test overrides.
   return { ...actual, DiagramOutputRouter: vi.fn() };
@@ -48,7 +47,7 @@ import type { ProgressReporterLike } from '@/cli/progress/index.js';
 function makeGlobalConfig(overrides: Partial<GlobalConfig> = {}): GlobalConfig {
   return {
     outputDir: './archguard',
-    format: 'mermaid',
+    formats: ['mermaid'],
     exclude: [],
     cli: { command: 'claude', args: [], timeout: 30000 },
     cache: { enabled: false, ttl: 0 },
@@ -97,6 +96,7 @@ const MOCK_PATHS = {
     svg: './archguard/test-diagram.svg',
     png: './archguard/test-diagram.png',
     json: './archguard/test-diagram.json',
+    puml: './archguard/test-diagram.puml',
   },
 };
 
@@ -230,10 +230,10 @@ describe('DiagramPipelineRunner', () => {
 
     it('format "json" → resultPaths.json populated, mmd/svg/png not set', async () => {
       setupBaseMocks();
-      const runner = makeRunner(makeGlobalConfig({ format: 'json' }));
+      const runner = makeRunner(makeGlobalConfig({ formats: ['json'] }));
       const pool = makePool();
 
-      const result = await runner.run(makeDiagram({ format: 'json' }), makeArchJson(), pool);
+      const result = await runner.run(makeDiagram({ formats: ['json'] }), makeArchJson(), pool);
 
       expect(result.success).toBe(true);
       expect(result.paths?.json).toBeDefined();
@@ -244,15 +244,42 @@ describe('DiagramPipelineRunner', () => {
 
     it('format "mermaid" → resultPaths.mmd, svg, png populated', async () => {
       setupBaseMocks();
-      const runner = makeRunner(makeGlobalConfig({ format: 'mermaid' }));
+      const runner = makeRunner(makeGlobalConfig({ formats: ['mermaid'] }));
       const pool = makePool();
 
-      const result = await runner.run(makeDiagram({ format: 'mermaid' }), makeArchJson(), pool);
+      const result = await runner.run(makeDiagram({ formats: ['mermaid'] }), makeArchJson(), pool);
 
       expect(result.success).toBe(true);
       expect(result.paths?.mmd).toBeDefined();
       expect(result.paths?.svg).toBeDefined();
       expect(result.paths?.png).toBeDefined();
+    });
+
+    it('multi-format selection → resultPaths accumulates every selected format', async () => {
+      setupBaseMocks();
+      const runner = makeRunner(makeGlobalConfig({ formats: ['json', 'plantuml', 'mermaid'] }));
+      const pool = makePool();
+
+      const result = await runner.run(makeDiagram(), makeArchJson(), pool);
+
+      expect(result.success).toBe(true);
+      expect(result.paths?.json).toBe(MOCK_PATHS.paths.json);
+      expect(result.paths?.puml).toBe(MOCK_PATHS.paths.puml);
+      expect(result.paths?.mmd).toBe(MOCK_PATHS.paths.mmd);
+      expect(result.paths?.svg).toBe(MOCK_PATHS.paths.svg);
+      expect(result.paths?.png).toBe(MOCK_PATHS.paths.png);
+    });
+
+    it('empty selection falls back to mermaid', async () => {
+      setupBaseMocks();
+      const runner = makeRunner(makeGlobalConfig({ formats: [] }));
+      const pool = makePool();
+
+      const result = await runner.run(makeDiagram(), makeArchJson(), pool);
+
+      expect(result.success).toBe(true);
+      expect(result.paths?.mmd).toBe(MOCK_PATHS.paths.mmd);
+      expect(result.paths?.json).toBeUndefined();
     });
 
     it('uses moduleGraph.nodes.length for stats.entities when level=package with tsAnalysis.moduleGraph', async () => {
@@ -419,7 +446,7 @@ describe('DiagramPipelineRunner', () => {
       (DiagramOutputRouter as any).mockImplementation(() => ({ route: routeMock }));
       new MermaidRenderWorkerPool(1, {} as any);
 
-      const config = makeGlobalConfig({ format: 'json' });
+      const config = makeGlobalConfig({ formats: ['json'] });
       const runner = new DiagramPipelineRunner(
         new ArchJSONAggregator() as any,
         new RealMetricsCalculator() as any,
@@ -429,7 +456,7 @@ describe('DiagramPipelineRunner', () => {
       );
 
       const result = await runner.run(
-        makeDiagram({ level: 'package', format: 'json' }),
+        makeDiagram({ level: 'package', formats: ['json'] }),
         moduleGraphArchJSON,
         makePool()
       );

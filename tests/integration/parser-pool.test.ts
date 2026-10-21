@@ -49,7 +49,7 @@ describe('parse worker pool integration', () => {
     const result = await runAnalysis({
       sessionRoot: root,
       workDir: path.join(root, '.archguard'),
-      cliOptions: { sources: [root], lang: 'typescript', format: 'json', cache: false },
+      cliOptions: { sources: [root], lang: 'typescript', formats: ['json'], cache: false },
       reporter,
       parseWorkerPools: pools,
     });
@@ -75,7 +75,7 @@ describe('parse worker pool integration', () => {
     await runAnalysis({
       sessionRoot: smallRoot,
       workDir: path.join(smallRoot, '.archguard'),
-      cliOptions: { sources: [smallRoot], lang: 'typescript', format: 'json', cache: false },
+      cliOptions: { sources: [smallRoot], lang: 'typescript', formats: ['json'], cache: false },
       reporter,
       parseWorkerPools: smallPools,
     });
@@ -143,7 +143,7 @@ describe('parse worker pool integration', () => {
       cliOptions: {
         sources: [root],
         lang: 'typescript' as const,
-        format: 'json' as const,
+        formats: ['json'] as const,
         cache: false,
       },
       reporter,

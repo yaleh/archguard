@@ -41,7 +41,7 @@ import os from 'os';
 function makeGlobalConfig(overrides: Partial<GlobalConfig> = {}): GlobalConfig {
   return {
     outputDir: './archguard',
-    format: 'mermaid',
+    formats: ['mermaid'],
     exclude: [],
     cli: { command: 'claude', args: [], timeout: 30000 },
     cache: { enabled: false, ttl: 0 },

@@ -99,7 +99,7 @@ import fs from 'fs-extra';
 const baseConfig: Config = {
   diagrams: [],
   outputDir: './archguard',
-  format: 'plantuml',
+  formats: ['plantuml'],
   exclude: [],
   cli: { command: 'claude', args: [], timeout: 60000 },
   cache: { enabled: true, ttl: 86400 },
@@ -238,7 +238,7 @@ describe('normalizeToDiagrams', () => {
 
       expect(detectJavaProjectStructure).toHaveBeenCalledWith(expect.stringMatching(/\/demo$/), {
         label: 'demo',
-        format: undefined,
+        formats: undefined,
         exclude: undefined,
       });
       expect(createProjectRootLanguageDiagramsMock).not.toHaveBeenCalled();
@@ -333,7 +333,7 @@ describe('normalizeToDiagrams', () => {
 
       const cliOptions: CLIOptions = {
         sources: ['./src'],
-        format: 'json',
+        formats: ['json'],
         exclude: ['**/*.spec.ts'],
       };
 
@@ -524,13 +524,13 @@ describe('normalizeToDiagrams', () => {
       const result = await normalizeToDiagrams(baseConfig, {
         sources: ['./src'],
         lang: 'cpp',
-        format: 'json',
+        formats: ['json'],
         exclude: ['**/*.test.cpp'],
       });
 
-      expect(result[0].format).toBe('json');
+      expect(result[0].formats).toEqual(['json']);
       expect(result[0].exclude).toEqual(['**/*.test.cpp']);
-      expect(result[1].format).toBe('json');
+      expect(result[1].formats).toEqual(['json']);
       expect(result[1].exclude).toEqual(['**/*.test.cpp']);
     });
 
@@ -570,7 +570,7 @@ describe('normalizeToDiagrams', () => {
       );
 
       expect(detectJavaProjectStructure).toHaveBeenCalledWith('/workspace/demo', {
-        format: undefined,
+        formats: undefined,
         exclude: undefined,
       });
       expect(createProjectRootLanguageDiagramsMock).not.toHaveBeenCalled();

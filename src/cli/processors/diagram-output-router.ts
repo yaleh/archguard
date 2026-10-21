@@ -21,6 +21,7 @@ import type { DiagramConfig, GlobalConfig, DetailLevel } from '@/types/config.js
 import type { ArchJSON, Entity, Relation } from '@/types/index.js';
 import type { ProgressReporterLike } from '@/cli/progress/index.js';
 import { canonicalizeArchJson } from '@/cli/utils/canonicalize-arch-json.js';
+import { resolveFormats } from '@/cli/utils/format-selection.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 import fs from 'fs-extra';
 import path from 'path';
@@ -129,15 +130,18 @@ export class DiagramOutputRouter {
   }
 
   /**
-   * Route the given ArchJSON to the appropriate output generator.
+   * Route the given ArchJSON to every selected output generator.
    *
-   * Dispatch order:
-   * 1. json format  → write JSON file directly
-   * 2. plantuml format → emit deterministic .puml (emit-only, no rendering)
-   * 3. mermaid + goAtlas extension → generateAtlasOutput
-   * 4. mermaid + tsAnalysis.moduleGraph + level=package → generateTsModuleGraphOutput
-   * 5. mermaid + language=cpp + level=package → generateCppPackageOutput
-   * 6. mermaid (all other) → generateDefaultOutput (MermaidDiagramGenerator)
+   * The format selection is resolved once (`resolveFormats`: per-diagram
+   * overrides global, empty selection defaults to mermaid) and then looped
+   * over, so one run can produce `.json`, `.puml` and Mermaid
+   * `.mmd`/`.svg`/`.png` artifacts side by side.
+   *
+   * Dispatch per format:
+   * 1. json     → write JSON file directly
+   * 2. plantuml → emit deterministic .puml (emit-only, no rendering)
+   * 3. mermaid  → generateAtlasOutput / generateTsModuleGraphOutput /
+   *               generateCppPackageOutput / generateDefaultOutput
    *
    * @returns every source artifact actually written (.mmd / .puml / .json).
    *          Class diagrams split into several files and Atlas diagrams emit one
@@ -150,28 +154,54 @@ export class DiagramOutputRouter {
     diagram: DiagramConfig,
     pool: MermaidRenderWorkerPool
   ): Promise<string[]> {
-    const format = diagram.format ?? this.globalConfig.format;
+    const formats = resolveFormats({
+      diagram: diagram.formats,
+      global: this.globalConfig.formats,
+    });
+    const outputs: string[] = [];
+
+    for (const format of formats) {
+      if (format === 'json') {
+        outputs.push(...(await this.writeJsonOutput(archJSON, paths, diagram)));
+      } else if (format === 'plantuml') {
+        await this.generatePlantUmlOutput(archJSON, paths, diagram.level);
+        outputs.push(paths.paths.puml);
+      } else {
+        outputs.push(...(await this.generateMermaidOutput(archJSON, paths, diagram, pool)));
+      }
+    }
+
+    return outputs;
+  }
+
+  /** JSON artifact: the ArchJSON for this diagram's aggregation level. */
+  private async writeJsonOutput(
+    archJSON: ArchJSON,
+    paths: OutputPaths,
+    diagram: DiagramConfig
+  ): Promise<string[]> {
+    await fs.ensureDir(path.dirname(paths.paths.json));
+    // Package-level TS output is derived from the module graph, so entities and
+    // relations are at directory granularity and mutually consistent. Other
+    // languages / levels pass through unchanged.
+    const outputJson =
+      diagram.level === 'package' ? buildTsPackageGraphArchJson(archJSON) : archJSON;
+    await fs.writeJson(paths.paths.json, canonicalizeArchJson(outputJson), { spaces: 2 });
+    return [paths.paths.json];
+  }
+
+  /**
+   * Mermaid routing — based on ArchJSON extensions and archJSON.language.
+   * NOTE: uses archJSON.extensions / archJSON.language, NOT diagram.language.
+   */
+  private async generateMermaidOutput(
+    archJSON: ArchJSON,
+    paths: OutputPaths,
+    diagram: DiagramConfig,
+    pool: MermaidRenderWorkerPool
+  ): Promise<string[]> {
     const level = diagram.level;
 
-    // Step 1: json format
-    if (format === 'json') {
-      await fs.ensureDir(path.dirname(paths.paths.json));
-      // Package-level TS output is derived from the module graph, so entities and
-      // relations are at directory granularity and mutually consistent. Other
-      // languages / levels pass through unchanged.
-      const outputJson = level === 'package' ? buildTsPackageGraphArchJson(archJSON) : archJSON;
-      await fs.writeJson(paths.paths.json, canonicalizeArchJson(outputJson), { spaces: 2 });
-      return [paths.paths.json];
-    }
-
-    // Step 2: plantuml format — deterministic emit-only .puml output
-    if (format === 'plantuml') {
-      await this.generatePlantUmlOutput(archJSON, paths, level);
-      return [paths.paths.puml];
-    }
-
-    // Step 2: mermaid routing — based on ArchJSON extensions and archJSON.language
-    // NOTE: uses archJSON.extensions / archJSON.language, NOT diagram.language
     if (new ExtensionAccessor(archJSON).hasAtlasExtension()) {
       return await this.generateAtlasOutput(archJSON, paths, diagram, pool);
     } else if (level === 'package' && archJSON.extensions?.tsAnalysis?.moduleGraph) {

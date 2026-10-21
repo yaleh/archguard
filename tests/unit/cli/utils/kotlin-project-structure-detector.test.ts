@@ -145,7 +145,7 @@ describe('detectKotlinProjectStructure', () => {
     expect(result[3].sources).toEqual([path.join(root, 'core/network')]);
   });
 
-  it('passes format and exclude through to every diagram', async () => {
+  it('passes formats and exclude through to every diagram', async () => {
     root = await makeTempProject({
       'settings.gradle.kts': `
         include(":app")
@@ -155,12 +155,12 @@ describe('detectKotlinProjectStructure', () => {
 
     const result = await detectKotlinProjectStructure(root, {
       label: 'MyApp',
-      format: 'json',
+      formats: ['json'],
       exclude: ['**/generated/**'],
     });
 
     expect(result.every((d) => d.language === 'kotlin')).toBe(true);
-    expect(result.every((d) => d.format === 'json')).toBe(true);
+    expect(result.every((d) => d.formats?.join(',') === 'json')).toBe(true);
     expect(result.every((d) => d.exclude?.[0] === '**/generated/**')).toBe(true);
   });
 

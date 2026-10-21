@@ -11,14 +11,14 @@
  * @version 3.0.0
  */
 
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
 import { ProgressReporter } from '../progress/index.js';
 import { ErrorHandler } from '../errors/index.js';
 import type { Config } from '../config-loader.js';
-import type { CLIOptions } from '../../types/config.js';
+import type { CLIOptions, OutputFormat } from '../../types/config.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
 import { runAnalysis } from '../analyze/run-analysis.js';
 import { runArchHealth, printArchHealth } from '../analyze/arch-health.js';
@@ -122,7 +122,17 @@ export function createAnalyzeCommand(): Command {
       )
 
       // ========== Global Config Overrides ==========
-      .option('-f, --format <type>', 'Output format: mermaid|json (default: mermaid)')
+      // Repeatable: `-f json -f plantuml` selects both artifacts (no comma
+      // shorthand). Commander collects into `--format`, which the action
+      // normalizes to CLIOptions.formats.
+      .addOption(
+        new Option(
+          '-f, --format <type>',
+          'Output format: mermaid|json|plantuml (repeatable, default: mermaid)'
+        )
+          .argParser(collectFormats)
+          .default([])
+      )
       .option('--work-dir <dir>', 'ArchGuard work directory (default: ./.archguard)')
       .option('--cache-dir <dir>', 'Cache directory (default: <work-dir>/cache)')
       .option('--output-dir <dir>', 'Output directory')
@@ -212,8 +222,19 @@ export function createAnalyzeCommand(): Command {
         '3.0'
       )
 
-      .action(analyzeCommandHandler)
+      .action((options: CLIOptions & { format?: string[] }) => {
+        // Commander collects the repeatable option under `format`; the public
+        // CLIOptions shape is the canonical `formats` array.
+        const { format, ...rest } = options;
+        const formats = format && format.length > 0 ? (format as OutputFormat[]) : undefined;
+        return analyzeCommandHandler({ ...rest, formats });
+      })
   );
+}
+
+/** Commander parser for a repeatable `-f` value. */
+function collectFormats(value: string, previous: string[]): string[] {
+  return [...previous, value];
 }
 
 /**

@@ -60,7 +60,7 @@ const makeArchJSON = (override: Partial<ArchJSON> = {}): ArchJSON => ({
 
 const makeGlobalConfig = (override: Partial<GlobalConfig> = {}): GlobalConfig => ({
   outputDir: './.archguard',
-  format: 'mermaid',
+  formats: ['mermaid'],
   exclude: [],
   cli: { command: 'claude', args: [], timeout: 180000 },
   cache: { enabled: true, ttl: 3600 },

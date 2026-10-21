@@ -93,7 +93,7 @@ describe('DiagramOutputRouter — split class diagram outputs', () => {
     // 6 entities in two 3-entity groups; limit 4 forces the split path (the
     // grouper merges groups of <= 2 entities, so each group needs 3).
     const globalConfig = {
-      format: 'mermaid',
+      formats: ['mermaid'],
       outputDir,
       exclude: [],
       maxNodesPerDiagram: 4,
@@ -105,6 +105,7 @@ describe('DiagramOutputRouter — split class diagram outputs', () => {
         mmd: path.join(outputDir, 'class', 'all-classes.mmd'),
         svg: path.join(outputDir, 'class', 'all-classes.svg'),
         png: path.join(outputDir, 'class', 'all-classes.png'),
+        puml: path.join(outputDir, 'class', 'all-classes.puml'),
       },
     };
     const diagram = {

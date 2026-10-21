@@ -1,7 +1,7 @@
 ---
 id: gap-multi-output-format-selection
 title: 多输出选择接口：formats 数组统一 CLI/配置文件/MCP，路由按集合循环产出
-status: ready
+status: done
 labels:
   - gap
 parent: null

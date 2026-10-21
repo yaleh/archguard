@@ -35,10 +35,10 @@ describe('Config Types - v2.0 API', () => {
         sources: ['./src/parser'],
         level: 'method',
         description: 'Parser module detailed view',
-        format: 'json',
+        formats: ['json'],
       };
       expect(diagram.description).toBe('Parser module detailed view');
-      expect(diagram.format).toBe('json');
+      expect(diagram.formats).toEqual(['json']);
     });
   });
 
@@ -47,7 +47,7 @@ describe('Config Types - v2.0 API', () => {
       const config: ArchGuardConfig = {
         diagrams: [],
         outputDir: './archguard',
-        format: 'mermaid',
+        formats: ['mermaid'],
         exclude: [],
         cli: {
           command: 'claude',
@@ -74,7 +74,7 @@ describe('Config Types - v2.0 API', () => {
           },
         ],
         outputDir: './archguard',
-        format: 'mermaid',
+        formats: ['mermaid'],
         exclude: [],
         cli: {
           command: 'claude',
@@ -112,7 +112,7 @@ describe('Config Types - v2.0 API', () => {
           },
         ],
         outputDir: './archguard',
-        format: 'mermaid',
+        formats: ['mermaid'],
         exclude: [],
         cli: {
           command: 'claude',
@@ -137,7 +137,7 @@ describe('Config Types - v2.0 API', () => {
     it('should include sources (plural)', () => {
       const options: CLIOptions = {
         sources: ['./src', './lib'],
-        format: 'mermaid',
+        formats: ['mermaid'],
       };
       expect(options.sources).toEqual(['./src', './lib']);
     });

@@ -57,7 +57,7 @@ describe('Custom Config Path Integration', () => {
     const customConfigPath = path.join(testDir, 'my-custom.config.json');
     await fs.writeJson(customConfigPath, {
       outputDir: './custom-output',
-      format: 'mermaid',
+      formats: ['mermaid'],
       diagrams: [
         {
           name: 'overview',
@@ -98,7 +98,7 @@ describe('Custom Config Path Integration', () => {
           level: 'class',
         },
       ],
-      format: 'json',
+      formats: ['json'],
     });
 
     const loader = new ConfigLoader(testDir);
@@ -106,7 +106,7 @@ describe('Custom Config Path Integration', () => {
     const config = await loader.load({}, relativePath);
 
     expect(config.diagrams).toHaveLength(1);
-    expect(config.format).toBe('json');
+    expect(config.formats).toEqual(['json']);
   });
 
   it('should support absolute paths for custom config', async () => {
@@ -139,21 +139,21 @@ describe('Custom Config Path Integration', () => {
           level: 'class',
         },
       ],
-      format: 'json',
+      formats: ['json'],
       outputDir: './base-output',
     });
 
     const loader = new ConfigLoader(testDir);
     const config = await loader.load(
       {
-        format: 'mermaid',
+        formats: ['mermaid'],
         outputDir: './override-output',
       },
       customConfigPath
     );
 
     // CLI options should override config file
-    expect(config.format).toBe('mermaid');
+    expect(config.formats).toEqual(['mermaid']);
     expect(config.outputDir).toBe('./override-output');
     // But diagrams should come from config file
     expect(config.diagrams[0].name).toBe('base-diagram');
@@ -178,7 +178,7 @@ describe('Custom Config Path Integration', () => {
       level: 'package',
     },
   ],
-  format: 'mermaid',
+  formats: ['mermaid'],
 };
 `;
     await fs.writeFile(customConfigPath, jsContent);
@@ -188,7 +188,7 @@ describe('Custom Config Path Integration', () => {
 
     expect(config.diagrams).toHaveLength(1);
     expect(config.diagrams[0].name).toBe('js-diagram');
-    expect(config.format).toBe('mermaid');
+    expect(config.formats).toEqual(['mermaid']);
   });
 
   it('should ignore default config when custom path is provided', async () => {
@@ -249,7 +249,7 @@ describe('Config defaults (no config file)', () => {
     const config = await loader.load({});
 
     expect(config.workDir).toBe('./.archguard');
-    expect(config.format).toBe('mermaid');
+    expect(config.formats).toEqual(['mermaid']);
     expect(config.mermaid).toEqual({
       renderer: 'isomorphic',
       theme: 'default',
@@ -282,14 +282,14 @@ describe('Config defaults (no config file)', () => {
     // Default search: <configDir>/archguard.config.json before .js
     // (config-loader.ts:482-501).
     await fs.writeJson(path.join(testDir, 'archguard.config.json'), {
-      format: 'json',
+      formats: ['json'],
       verbose: true,
       diagrams: [{ name: 'from-default', sources: ['./src'], level: 'class' }],
     });
 
     const config = await new ConfigLoader(testDir).load({});
 
-    expect(config.format).toBe('json');
+    expect(config.formats).toEqual(['json']);
     expect(config.verbose).toBe(true);
     expect(config.diagrams).toHaveLength(1);
     expect(config.diagrams[0].name).toBe('from-default');
@@ -354,10 +354,10 @@ describe('Config override semantics (deepMerge)', () => {
       cli: { command: 'claude', args: [], timeout: 30000 },
     });
 
-    const config = await new ConfigLoader(testDir).load({ format: 'json' }, configPath);
+    const config = await new ConfigLoader(testDir).load({ formats: ['json'] }, configPath);
 
-    // The override only touches format; verbose and cli come from the file.
-    expect(config.format).toBe('json');
+    // The override only touches formats; verbose and cli come from the file.
+    expect(config.formats).toEqual(['json']);
     expect(config.verbose).toBe(true);
     expect(config.cli?.timeout).toBe(30000);
   });
@@ -384,11 +384,11 @@ describe('Config validation errors (invalid config)', () => {
     // "  - <field.path>: <issue.message>" line (config-loader.ts:361-374).
     const loader = new ConfigLoader(testDir);
 
-    await expect(loader.load({ format: 'svg' as never })).rejects.toThrow(
+    await expect(loader.load({ formats: ['svg'] as never })).rejects.toThrow(
       'Configuration validation failed:'
     );
-    await expect(loader.load({ format: 'svg' as never })).rejects.toThrow(
-      / {2}- format: Invalid option: expected one of "mermaid"\|"json"\|"plantuml"/
+    await expect(loader.load({ formats: ['svg'] as never })).rejects.toThrow(
+      / {2}- formats\.0: Invalid option: expected one of "mermaid"\|"json"\|"plantuml"/
     );
   });
 
@@ -424,13 +424,13 @@ describe('Config validation errors (invalid config)', () => {
     // Same validation formatting applies when the bad value comes from a file
     // loaded through a custom path, not just from CLI options.
     const configPath = path.join(testDir, 'bad.config.json');
-    await fs.writeJson(configPath, { format: 'svg' });
+    await fs.writeJson(configPath, { formats: ['svg'] });
 
     await expect(new ConfigLoader(testDir).load({}, configPath)).rejects.toThrow(
       'Configuration validation failed:'
     );
     await expect(new ConfigLoader(testDir).load({}, configPath)).rejects.toThrow(
-      / {2}- format: Invalid option: expected one of "mermaid"\|"json"\|"plantuml"/
+      / {2}- formats\.0: Invalid option: expected one of "mermaid"\|"json"\|"plantuml"/
     );
   });
 });

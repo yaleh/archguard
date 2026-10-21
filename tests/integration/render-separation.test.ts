@@ -19,7 +19,7 @@ import type { RenderJob } from '@/mermaid/diagram-generator.js';
 describe('Render Stage Separation', () => {
   const createGlobalConfig = (): GlobalConfig => ({
     outputDir: './archguard',
-    format: 'mermaid',
+    formats: ['mermaid'],
     exclude: ['**/*.test.ts'],
     cli: {
       command: 'claude',

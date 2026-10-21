@@ -95,11 +95,11 @@ export async function getCppTopLevelModules(sourceRoot: string): Promise<string[
 export async function detectCppProjectStructure(
   sourceRoot: string,
   moduleName: string,
-  options?: { format?: string; exclude?: string[] }
+  options?: { formats?: DiagramConfig['formats']; exclude?: string[] }
 ): Promise<DiagramConfig[]> {
   const common: Partial<DiagramConfig> = {
     language: 'cpp',
-    ...(options?.format !== undefined && { format: options.format as DiagramConfig['format'] }),
+    ...(options?.formats !== undefined && { formats: options.formats }),
     ...(options?.exclude !== undefined && { exclude: options.exclude }),
   };
 

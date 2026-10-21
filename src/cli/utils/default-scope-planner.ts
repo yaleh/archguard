@@ -13,7 +13,7 @@ export interface PlannedScope {
 }
 
 interface DiagramOptions {
-  format?: DiagramConfig['format'];
+  formats?: DiagramConfig['formats'];
   exclude?: string[];
 }
 
@@ -72,7 +72,7 @@ export function createProjectRootLanguageDiagrams(
 function createScopeDiagrams(scope: PlannedScope, options?: DiagramOptions): DiagramConfig[] {
   const common: Partial<DiagramConfig> = {
     language: scope.language,
-    ...(options?.format !== undefined && { format: options.format }),
+    ...(options?.formats !== undefined && { formats: options.formats }),
     ...(options?.exclude !== undefined && { exclude: options.exclude }),
     ...(scope.role ? { queryRole: scope.role } : {}),
   };

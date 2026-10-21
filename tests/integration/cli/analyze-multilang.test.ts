@@ -76,7 +76,7 @@ describe('CLI Multi-language Support', () => {
   it('should maintain backward compatibility with normalizeToDiagrams', async () => {
     const config: Config = {
       source: './src',
-      format: 'mermaid',
+      formats: ['mermaid'],
       exclude: [],
       diagrams: [],
       outputDir: './archguard',
@@ -94,7 +94,7 @@ describe('CLI Multi-language Support', () => {
 
     const cliOptions: CLIOptions = {
       sources: ['./src/cli'],
-      format: 'mermaid',
+      formats: ['mermaid'],
     };
 
     const diagrams = await normalizeToDiagrams(config, cliOptions);

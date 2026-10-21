@@ -75,7 +75,7 @@ describe('Default language scopes', () => {
           projectRoot: root,
           lang: 'python',
           sources: ['./gguf-py'],
-          format: 'json',
+          formats: ['json'],
         },
       });
       expect(analyzeResult.content[0].text).toContain('Analysis completed');

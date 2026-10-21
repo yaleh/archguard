@@ -30,7 +30,7 @@ interface OldConfig {
 }
 
 interface NewConfig {
-  format: 'mermaid' | 'json';
+  formats: Array<'mermaid' | 'json'>;
   mermaid?: {
     enableLLMGrouping?: boolean;
     renderer?: 'isomorphic' | 'cli';
@@ -113,7 +113,7 @@ export async function migrateConfig(configPath: string): Promise<void> {
 function transformConfig(oldConfig: OldConfig): NewConfig {
   const newConfig: NewConfig = {
     ...oldConfig,
-    format: 'mermaid',
+    formats: ['mermaid'],
     mermaid: {
       enableLLMGrouping: true,
       renderer: 'isomorphic',
@@ -170,8 +170,13 @@ export async function validateConfig(configPath: string): Promise<boolean> {
     const config: NewConfig = await fs.readJson(configPath);
 
     // Check format
-    if (config.format !== 'mermaid' && config.format !== 'json') {
-      console.log(`❌ Invalid format: ${config.format}`);
+    const validFormats = ['mermaid', 'json', 'plantuml'];
+    if (
+      !Array.isArray(config.formats) ||
+      config.formats.length === 0 ||
+      !config.formats.every((format) => validFormats.includes(format))
+    ) {
+      console.log(`❌ Invalid formats: ${JSON.stringify(config.formats)}`);
       return false;
     }
 

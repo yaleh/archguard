@@ -576,7 +576,7 @@ describe('DiagramProcessor', () => {
   // Test data
   const createGlobalConfig = (): GlobalConfig => ({
     outputDir: './archguard',
-    format: 'mermaid',
+    formats: ['mermaid'],
     exclude: ['**/*.test.ts'],
     cli: {
       command: 'claude',
@@ -988,7 +988,7 @@ describe('DiagramProcessor', () => {
           name: 'test',
           sources: ['./src'],
           level: 'class' as const,
-          format: 'json' as const,
+          formats: ['json'] as const,
         },
       ];
       const globalConfig = createGlobalConfig();
@@ -1235,7 +1235,7 @@ describe('DiagramProcessor', () => {
      */
     const setupMocks = async (
       opts: {
-        format?: 'json' | 'mermaid';
+        formats?: Array<'json' | 'mermaid'>;
         level?: 'class' | 'package' | 'method';
         archJSON?: ArchJSON;
       } = {}
@@ -1284,7 +1284,7 @@ describe('DiagramProcessor', () => {
     };
 
     it('json format: output ArchJSON contains metrics field', async () => {
-      await setupMocks({ format: 'json' });
+      await setupMocks({ formats: ['json'] });
 
       const fs = (await import('fs-extra')).default;
       let writtenData: unknown;
@@ -1294,7 +1294,7 @@ describe('DiagramProcessor', () => {
       });
 
       const diagrams = [
-        { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
+        { name: 'test', sources: ['./src'], level: 'class' as const, formats: ['json'] as const },
       ];
       const processor = new DiagramProcessor({
         diagrams,
@@ -1309,7 +1309,7 @@ describe('DiagramProcessor', () => {
     });
 
     it('json format: metrics.level matches diagram.level', async () => {
-      await setupMocks({ format: 'json' });
+      await setupMocks({ formats: ['json'] });
 
       const fs = (await import('fs-extra')).default;
       let writtenData: unknown;
@@ -1319,7 +1319,7 @@ describe('DiagramProcessor', () => {
       });
 
       const diagrams = [
-        { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
+        { name: 'test', sources: ['./src'], level: 'class' as const, formats: ['json'] as const },
       ];
       const processor = new DiagramProcessor({
         diagrams,
@@ -1334,7 +1334,7 @@ describe('DiagramProcessor', () => {
     it('json format: metrics.entityCount === aggregatedJSON.entities.length', async () => {
       const archJSON = createTestArchJSON();
       // 1 entity in createTestArchJSON
-      await setupMocks({ format: 'json', archJSON });
+      await setupMocks({ formats: ['json'], archJSON });
 
       const fs = (await import('fs-extra')).default;
       let writtenData: unknown;
@@ -1344,7 +1344,7 @@ describe('DiagramProcessor', () => {
       });
 
       const diagrams = [
-        { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
+        { name: 'test', sources: ['./src'], level: 'class' as const, formats: ['json'] as const },
       ];
       const processor = new DiagramProcessor({
         diagrams,
@@ -1357,7 +1357,7 @@ describe('DiagramProcessor', () => {
     });
 
     it('mermaid format: does not compute metrics, output object has no metrics field', async () => {
-      await setupMocks({ format: 'mermaid' });
+      await setupMocks({ formats: ['mermaid'] });
 
       const fs = (await import('fs-extra')).default;
       let writtenData: unknown = undefined;
@@ -1368,7 +1368,7 @@ describe('DiagramProcessor', () => {
 
       // globalConfig format is 'mermaid' by default; no diagram-level format override
       const diagrams = [{ name: 'test', sources: ['./src'], level: 'class' as const }];
-      const globalConfig = { ...createGlobalConfig(), format: 'mermaid' as const };
+      const globalConfig = { ...createGlobalConfig(), formats: ['mermaid'] as const };
       const processor = new DiagramProcessor({ diagrams, globalConfig, progress });
       await processor.processAll();
 
@@ -1380,13 +1380,13 @@ describe('DiagramProcessor', () => {
 
     it('method level: does not mutate rawArchJSON (cached object has no metrics field)', async () => {
       const rawArchJSON = createTestArchJSON();
-      await setupMocks({ format: 'json', archJSON: rawArchJSON });
+      await setupMocks({ formats: ['json'], archJSON: rawArchJSON });
 
       const fs = (await import('fs-extra')).default;
       (fs.writeJson as any).mockImplementation(() => Promise.resolve());
 
       const diagrams = [
-        { name: 'test', sources: ['./src'], level: 'method' as const, format: 'json' as const },
+        { name: 'test', sources: ['./src'], level: 'method' as const, formats: ['json'] as const },
       ];
       const processor = new DiagramProcessor({
         diagrams,
@@ -1402,13 +1402,13 @@ describe('DiagramProcessor', () => {
     it('metrics field does not affect existing DiagramResult.stats values', async () => {
       const archJSON = createTestArchJSON();
       // createTestArchJSON has 1 entity, 0 relations
-      await setupMocks({ format: 'json', archJSON });
+      await setupMocks({ formats: ['json'], archJSON });
 
       const fs = (await import('fs-extra')).default;
       (fs.writeJson as any).mockImplementation(() => Promise.resolve());
 
       const diagrams = [
-        { name: 'test', sources: ['./src'], level: 'class' as const, format: 'json' as const },
+        { name: 'test', sources: ['./src'], level: 'class' as const, formats: ['json'] as const },
       ];
       const processor = new DiagramProcessor({
         diagrams,
@@ -1921,7 +1921,7 @@ describe('Atlas layer parallel rendering', () => {
       diagrams: [{ name: 'go-atlas', sources: ['./src'], level: 'package', language: 'go' }],
       globalConfig: {
         outputDir: './archguard',
-        format: 'mermaid',
+        formats: ['mermaid'],
         exclude: [],
         cli: { command: 'claude', args: [], timeout: 30000 },
         cache: { enabled: false, ttl: 0 },
@@ -1986,7 +1986,7 @@ describe('Atlas layer parallel rendering', () => {
       diagrams: [{ name: 'single', sources: ['./src'], level: 'class' }],
       globalConfig: {
         outputDir: './archguard',
-        format: 'mermaid',
+        formats: ['mermaid'],
         exclude: [],
         cli: { command: 'claude', args: [], timeout: 30000 },
         cache: { enabled: false, ttl: 0 },
@@ -2040,7 +2040,7 @@ describe('Atlas layer parallel rendering', () => {
       diagrams: [{ name: 'json-only', sources: ['./src'], level: 'class' }],
       globalConfig: {
         outputDir: './archguard',
-        format: 'json', // all diagrams are json
+        formats: ['json'], // all diagrams are json
         exclude: [],
         cli: { command: 'claude', args: [], timeout: 30000 },
         cache: { enabled: false, ttl: 0 },
@@ -2059,8 +2059,8 @@ describe('Atlas layer parallel rendering', () => {
 
   it('calls pool.start() when at least one diagram uses mermaid format', async () => {
     /**
-     * Phase C: even if globalConfig.format=json, a per-diagram format:'mermaid' override
-     * must trigger pool.start().
+     * Phase C: even if globalConfig.formats=['json'], a per-diagram formats:['mermaid']
+     * override must trigger pool.start().
      */
     await setupCommonMocks();
 
@@ -2098,12 +2098,12 @@ describe('Atlas layer parallel rendering', () => {
 
     const processor = new DiagramProcessor({
       diagrams: [
-        // diagram-level format override to mermaid, while globalConfig is json
-        { name: 'mermaid-one', sources: ['./src'], level: 'class', format: 'mermaid' as const },
+        // diagram-level formats override to mermaid, while globalConfig is json
+        { name: 'mermaid-one', sources: ['./src'], level: 'class', formats: ['mermaid'] as const },
       ],
       globalConfig: {
         outputDir: './archguard',
-        format: 'json', // global default is json
+        formats: ['json'], // global default is json
         exclude: [],
         cli: { command: 'claude', args: [], timeout: 30000 },
         cache: { enabled: false, ttl: 0 },
@@ -2115,7 +2115,7 @@ describe('Atlas layer parallel rendering', () => {
 
     await processor.processAll();
 
-    // start() MUST be called because one diagram has format:'mermaid'
+    // start() MUST be called because one diagram has formats:['mermaid']
     expect(startSpy).toHaveBeenCalledOnce();
   });
 
@@ -2162,7 +2162,7 @@ describe('Atlas layer parallel rendering', () => {
       diagrams: [{ name: 'go-atlas', sources: ['./src'], level: 'package', language: 'go' }],
       globalConfig: {
         outputDir: './archguard',
-        format: 'mermaid',
+        formats: ['mermaid'],
         exclude: [],
         cli: { command: 'claude', args: [], timeout: 30000 },
         cache: { enabled: false, ttl: 0 },
@@ -2221,7 +2221,7 @@ describe('Atlas layer parallel rendering', () => {
       diagrams: [{ name: 'go-atlas', sources: ['./src'], level: 'package', language: 'go' }],
       globalConfig: {
         outputDir: './archguard',
-        format: 'mermaid',
+        formats: ['mermaid'],
         exclude: [],
         cli: { command: 'claude', args: [], timeout: 30000 },
         cache: { enabled: false, ttl: 0 },
