@@ -192,7 +192,7 @@ export class DiagramPipelineRunner {
         );
       }
 
-      await this.router.route(outputJSON, paths, diagram, pool);
+      const generatedFiles = (await this.router.route(outputJSON, paths, diagram, pool)) ?? [];
 
       if (progress) {
         progress.update(diagram.name, 90, 'Finalizing');
@@ -234,6 +234,7 @@ export class DiagramPipelineRunner {
         success: true,
         metrics: computedMetrics,
         paths: resultPaths,
+        ...(generatedFiles.length > 0 ? { files: generatedFiles } : {}),
         stats: {
           entities: usesModuleGraph
             ? moduleGraph.nodes.length

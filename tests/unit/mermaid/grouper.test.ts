@@ -462,7 +462,7 @@ describe('HeuristicGrouper', () => {
       expect(result.packages.every((p) => !p.name.includes(' & '))).toBe(true);
     });
 
-    it('still merges non-path groups with adjacent groups (TypeScript behavior preserved)', () => {
+    it('does NOT merge directory groups with adjacent groups (TypeScript directory hierarchy preserved)', () => {
       const grouper = new HeuristicGrouper({ maxPackages: 20 });
       const archJson: ArchJSON = {
         version: '1.1',
@@ -491,8 +491,89 @@ describe('HeuristicGrouper', () => {
       };
 
       const result = grouper.group(archJson);
-      // Both groups have 1 entity each → should merge (existing TypeScript behavior)
-      expect(result.packages.some((p) => p.name.includes(' & '))).toBe(true);
+      // Directory-derived groups keep their own hierarchy even when small:
+      // merging src/services into src/repos would erase the distinction this
+      // grouping exists to preserve.
+      expect(result.packages.some((p) => p.name.includes(' & '))).toBe(false);
+      expect(result.packages).toHaveLength(2);
+      expect(result.packages.map((p) => p.path?.join('/'))).toEqual([
+        'src/services',
+        'src/repos',
+      ]);
+    });
+  });
+
+  describe('directory hierarchy grouping', () => {
+    const makeClassEntity = (id: string, file: string) => ({
+      id,
+      name: id,
+      type: 'class' as const,
+      visibility: 'public' as const,
+      members: [],
+      sourceLocation: { file, startLine: 1, endLine: 10 },
+    });
+
+    it('preserves at least two directory levels in sibling sub-directories', () => {
+      const nestedArchJson: ArchJSON = {
+        version: '1.1',
+        language: 'typescript',
+        timestamp: '2026-01-26T10:00:00Z',
+        sourceFiles: [],
+        entities: [
+          makeClassEntity('C1', 'a/b/c/C1.ts'),
+          makeClassEntity('C2', 'a/b/c/C2.ts'),
+          makeClassEntity('D1', 'a/b/d/D1.ts'),
+          makeClassEntity('D2', 'a/b/d/D2.ts'),
+        ],
+        relations: [],
+      };
+
+      const decision = new HeuristicGrouper().group(nestedArchJson);
+
+      expect(decision.packages).toHaveLength(2);
+      expect(decision.packages.map((pkg) => pkg.path)).toEqual([
+        ['a', 'b', 'c'],
+        ['a', 'b', 'd'],
+      ]);
+      // No group may swallow all classes.
+      const largest = Math.max(...decision.packages.map((pkg) => pkg.entities.length));
+      expect(largest).toBeLessThan(nestedArchJson.entities.length);
+    });
+
+    it('relativizes absolute source paths against workspaceRoot', () => {
+      const archJson: ArchJSON = {
+        version: '1.1',
+        language: 'typescript',
+        timestamp: '2026-01-26T10:00:00Z',
+        sourceFiles: [],
+        workspaceRoot: '/project',
+        entities: [makeClassEntity('A', '/project/packages/app/src/a/A.ts')],
+        relations: [],
+      };
+
+      const decision = new HeuristicGrouper().group(archJson);
+      expect(decision.packages).toHaveLength(1);
+      expect(decision.packages[0]?.path).toEqual(['packages', 'app', 'src', 'a']);
+      expect(decision.packages[0]?.name).not.toContain('/project');
+    });
+
+    it('does not truncate directory groups by default (no silent class loss)', () => {
+      const entities = Array.from({ length: 12 }, (_, i) =>
+        makeClassEntity(`E${i}`, `src/pkg${i}/E${i}.ts`)
+      );
+      const archJson: ArchJSON = {
+        version: '1.1',
+        language: 'typescript',
+        timestamp: '2026-01-26T10:00:00Z',
+        sourceFiles: [],
+        entities,
+        relations: [],
+      };
+
+      const decision = new HeuristicGrouper().group(archJson);
+      expect(decision.packages).toHaveLength(12);
+      const totalGrouped = decision.packages.reduce((sum, pkg) => sum + pkg.entities.length, 0);
+      expect(totalGrouped).toBe(entities.length);
     });
   });
 

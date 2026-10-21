@@ -104,6 +104,18 @@ export class DiagramIndexGenerator {
       }
     }
 
+    // Split diagrams write one file per group (and per oversized-group chunk).
+    // Enumerate all of them so the index is a complete manifest of artifacts,
+    // not just the logical diagram name.
+    if (result.files && result.files.length > 1) {
+      section += `- **Files** (${result.files.length}):\n`;
+      for (const file of result.files) {
+        const relativePath = path.relative(this.globalConfig.outputDir, file);
+        section += `  - [${relativePath}](${relativePath})\n`;
+      }
+      section += '\n';
+    }
+
     section += '---\n\n';
     return section;
   }

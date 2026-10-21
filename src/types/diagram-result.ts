@@ -28,6 +28,14 @@ export interface DiagramResult {
     png?: string;
     json?: string;
   };
+  /**
+   * Every file actually written for this diagram, in deterministic order.
+   *
+   * Class/method diagrams over the node limit are split into one file per
+   * group (and large groups are chunked), so `paths.mmd` may be only the
+   * logical entry point. `files` lets index.md enumerate all split artifacts.
+   */
+  files?: string[];
   /** Processing statistics (if successful) */
   stats?: {
     entities: number;

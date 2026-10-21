@@ -2,6 +2,7 @@
  * Grouper implementations for organizing entities into packages
  */
 
+import path from 'path';
 import type { ArchJSON } from '../types/index.js';
 import type { GroupingDecision, PackageGroup, LayoutDecision, GrouperConfig } from './types.js';
 
@@ -15,7 +16,11 @@ export class HeuristicGrouper {
   constructor(config?: Partial<GrouperConfig>) {
     this.config = {
       strategy: 'heuristic',
-      maxPackages: config?.maxPackages ?? 10,
+      // Default: never silently drop groups. maxPackages remains an explicit
+      // opt-in cap (applyLimits keeps the largest groups when set), but an
+      // unbounded directory grouping must not lose classes that fall outside
+      // the first N directories.
+      maxPackages: config?.maxPackages ?? Infinity,
       maxEntitiesPerPackage: config?.maxEntitiesPerPackage ?? Infinity,
       customRules: config?.customRules ?? [],
     };
@@ -111,11 +116,43 @@ export class HeuristicGrouper {
   }
 
   /**
-   * Group entities by their file paths
+   * Group entities by their file paths.
+   *
+   * Class-level entities are grouped by their full project-relative directory
+   * path (at least two segments where available), so the directory hierarchy is
+   * preserved instead of being collapsed to a single top-level layer name.
+   * Path-based package entities (e.g. C++ `src/models`) keep their existing
+   * top-level grouping, and Java entities keep their Maven-module grouping.
    */
   private groupByPath(archJson: ArchJSON): PackageGroup[] {
-    const packageMap = new Map<string, string[]>();
-    const reasoningMap = new Map<string, string>();
+    interface GroupAccumulator {
+      name: string;
+      entities: string[];
+      reasoning: string;
+      path?: string[];
+    }
+
+    const groups = new Map<string, GroupAccumulator>();
+
+    const addToGroup = (
+      key: string,
+      name: string,
+      entityId: string,
+      reasoning: string,
+      path?: string[]
+    ): void => {
+      const existing = groups.get(key);
+      if (existing) {
+        existing.entities.push(entityId);
+        return;
+      }
+      groups.set(key, {
+        name,
+        entities: [entityId],
+        reasoning,
+        ...(path && path.length > 0 ? { path } : {}),
+      });
+    };
 
     for (const entity of archJson.entities) {
       // For path-based package names (e.g. "src", "src/models", "examples/batched"),
@@ -123,34 +160,102 @@ export class HeuristicGrouper {
       // Package entities from the aggregator always carry their canonical path as name.
       // 'package' is a valid EntityType (open union) — no cast needed.
       const isPathBased = entity.type === 'package' || entity.name.includes('/');
+      if (isPathBased) {
+        const topLevel = entity.name.split('/')[0];
+        addToGroup(
+          `path:${topLevel}`,
+          this.formatPackageName(topLevel),
+          entity.id,
+          `Grouped by path: ${topLevel}/`
+        );
+        continue;
+      }
+
       const javaModuleName =
         archJson.language === 'java'
           ? this.extractJavaMavenModuleName(entity.sourceLocation.file)
           : null;
-      const packageName = isPathBased
-        ? entity.name.split('/')[0]
-        : (javaModuleName ?? this.extractPackageName(entity.sourceLocation.file));
-
-      if (!packageMap.has(packageName)) {
-        packageMap.set(packageName, []);
-      }
-
       if (javaModuleName) {
-        reasoningMap.set(packageName, `Grouped by Maven module: ${packageName}`);
+        addToGroup(
+          `maven:${javaModuleName}`,
+          this.formatPackageName(javaModuleName),
+          entity.id,
+          `Grouped by Maven module: ${javaModuleName}`
+        );
+        continue;
       }
 
-      packageMap.get(packageName).push(entity.id);
-      if (isPathBased) {
-        reasoningMap.set(packageName, `Grouped by path: ${packageName}/`);
+      // Directory-aware grouping: keep the full directory path so two classes
+      // in sibling sub-directories can never collapse into one flat layer.
+      const directoryPath = this.extractDirectorySegments(
+        entity.sourceLocation.file,
+        archJson.workspaceRoot
+      );
+      if (directoryPath.length > 0) {
+        const key = `dir:${directoryPath.join('/')}`;
+        addToGroup(
+          key,
+          this.formatDirectoryName(directoryPath),
+          entity.id,
+          `Grouped by directory: ${directoryPath.join('/')}`,
+          directoryPath
+        );
+        continue;
       }
+
+      // Fallback for entities without a usable source path: legacy heuristic.
+      const legacyName = this.extractPackageName(entity.sourceLocation.file);
+      addToGroup(
+        `legacy:${legacyName}`,
+        this.formatPackageName(legacyName),
+        entity.id,
+        `Grouped by path: ${legacyName}`
+      );
     }
 
-    return Array.from(packageMap.entries()).map(([rawName, entities]) => ({
-      name: this.formatPackageName(rawName),
-      entities,
-      reasoning: reasoningMap.get(rawName) ?? `Grouped by path: ${rawName}`,
-    }));
+    return Array.from(groups.values());
   }
+
+  /**
+   * Derive the project-relative directory segments for a source file.
+   *
+   * `workspaceRoot` is used to relativize absolute paths. Absolute paths
+   * outside the workspace (or with no workspace root) yield an empty result so
+   * the caller falls back to the legacy single-name heuristic rather than
+   * leaking machine-specific path prefixes into namespace names.
+   */
+  private extractDirectorySegments(filePath: string, workspaceRoot?: string): string[] {
+    if (!filePath || filePath.trim() === '') {
+      return [];
+    }
+
+    const normalizedFile = filePath.replace(/\\/g, '/');
+    const normalizedRoot = workspaceRoot?.replace(/\\/g, '/').replace(/\/+$/, '');
+
+    let relative = normalizedFile;
+    if (path.posix.isAbsolute(normalizedFile) || /^[a-zA-Z]:\//.test(normalizedFile)) {
+      if (!normalizedRoot) {
+        return [];
+      }
+      const root = normalizedRoot.replace(/^([a-zA-Z]:)/, (m) => m.toLowerCase());
+      const candidate = relative.replace(/^([a-zA-Z]:)/, (m) => m.toLowerCase());
+      if (candidate === root) {
+        return [];
+      }
+      if (!candidate.startsWith(`${root}/`)) {
+        return [];
+      }
+      relative = candidate.slice(root.length + 1);
+    }
+
+    const dir = path.posix.dirname(relative);
+    if (!dir || dir === '.' || dir === '/') {
+      return [];
+    }
+
+    return dir.split('/').filter((segment) => segment !== '' && segment !== '.');
+  }
+
 
   private extractJavaMavenModuleName(filePath: string): string | null {
     if (!filePath || filePath.trim() === '') {
@@ -243,12 +348,47 @@ export class HeuristicGrouper {
   }
 
   /**
+   * Format a directory path for display, e.g. `['src', 'user']` → `Src User Layer`.
+   *
+   * Every segment is kept (unlike formatPackageName, which only ever sees one
+   * segment) so the human-readable name still reflects the directory depth.
+   */
+  private formatDirectoryName(segments: string[]): string {
+    const formatted = segments
+      .map((segment) =>
+        segment
+          .split(/[-_]/)
+          .filter(Boolean)
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')
+      )
+      .filter(Boolean)
+      .join(' ');
+
+    if (!formatted) {
+      return 'Core Layer';
+    }
+
+    if (!formatted.includes('Layer') && !formatted.includes('Package')) {
+      return `${formatted} Layer`;
+    }
+
+    return formatted;
+  }
+
+  /**
    * Merge small packages to reduce fragmentation
    */
   private mergeSmallPackages(packages: PackageGroup[]): PackageGroup[] {
     const threshold = 2; // Merge packages with <= 2 entities
     const merged: PackageGroup[] = [];
     const skipIndices = new Set<number>();
+
+    const isProtectedGroup = (group: PackageGroup | undefined): boolean =>
+      !!group &&
+      (group.path !== undefined ||
+        group.reasoning?.includes('/') === true ||
+        group.reasoning?.startsWith('Grouped by Maven module:') === true);
 
     for (let i = 0; i < packages.length; i++) {
       if (skipIndices.has(i)) {
@@ -258,17 +398,13 @@ export class HeuristicGrouper {
       const current = packages[i];
       if (!current) continue;
 
-      // Skip merging for protected groups (path-based / Maven module based).
-      // They already represent meaningful project boundaries.
-      const isProtectedGroup =
-        current.reasoning?.includes('/') ||
-        current.reasoning?.startsWith('Grouped by Maven module:');
-      if (current.entities.length <= threshold && !isProtectedGroup && i + 1 < packages.length) {
+      // Skip merging for protected groups (directory-path / Maven module based).
+      // They already represent meaningful project boundaries and merging them
+      // would erase the directory hierarchy this grouping exists to preserve.
+      if (current.entities.length <= threshold && !isProtectedGroup(current) && i + 1 < packages.length) {
         // Merge with next package
         const next = packages[i + 1];
-        const nextIsProtectedGroup =
-          next?.reasoning?.includes('/') || next?.reasoning?.startsWith('Grouped by Maven module:');
-        if (next && !skipIndices.has(i + 1) && !nextIsProtectedGroup) {
+        if (next && !skipIndices.has(i + 1) && !isProtectedGroup(next)) {
           merged.push({
             name: `${current.name} & ${next.name}`,
             entities: [...current.entities, ...next.entities],

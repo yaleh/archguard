@@ -87,10 +87,15 @@ describe('sanitizeType', () => {
     expect(sanitizeType('Partial<Foo>')).toBe('any');
     expect(sanitizeType('Record<string, number>')).toBe('any');
   });
-  it('maps function signatures by replacing the arrow prefix with Function', () => {
+  it('maps function signatures by replacing the arrow form with Function', () => {
     expect(sanitizeType('(a: number) =>')).toBe('Function');
-    // the return type is left appended verbatim by the implementation
-    expect(sanitizeType('(a: number) => void')).toBe('Functionvoid');
+  });
+  it('drops the arrow return type (no unparseable Functionvoid artifacts)', () => {
+    // A leftover return type produced `Functionvoid)[]`, which crashes
+    // Mermaid's ClassMember parser instead of failing as a syntax error.
+    expect(sanitizeType('(a: number) => void')).toBe('Function');
+    expect(sanitizeType('(() => void)[]')).toBe('Array');
+    expect(sanitizeType('Array<() => void>')).toBe('Array');
   });
   it('collapses Promise wrapping', () => {
     expect(sanitizeType('Promise<string>')).toBe('any');

@@ -138,13 +138,17 @@ export class DiagramOutputRouter {
    * 4. mermaid + tsAnalysis.moduleGraph + level=package → generateTsModuleGraphOutput
    * 5. mermaid + language=cpp + level=package → generateCppPackageOutput
    * 6. mermaid (all other) → generateDefaultOutput (MermaidDiagramGenerator)
+   *
+   * @returns paths of every diagram file actually written. Class/method diagrams
+   * can be split into several files; returning them lets index.md enumerate all
+   * artifacts instead of only the logical diagram name.
    */
   async route(
     archJSON: ArchJSON,
     paths: OutputPaths,
     diagram: DiagramConfig,
     pool: MermaidRenderWorkerPool
-  ): Promise<void> {
+  ): Promise<string[]> {
     const format = diagram.format ?? this.globalConfig.format;
     const level = diagram.level;
 
@@ -156,25 +160,27 @@ export class DiagramOutputRouter {
       // languages / levels pass through unchanged.
       const outputJson = level === 'package' ? buildTsPackageGraphArchJson(archJSON) : archJSON;
       await fs.writeJson(paths.paths.json, canonicalizeArchJson(outputJson), { spaces: 2 });
-      return;
+      return [paths.paths.json];
     }
 
     // Step 2: plantuml format — deterministic emit-only .puml output
     if (format === 'plantuml') {
       await this.generatePlantUmlOutput(archJSON, paths, level);
-      return;
+      return [paths.paths.puml];
     }
 
     // Step 2: mermaid routing — based on ArchJSON extensions and archJSON.language
     // NOTE: uses archJSON.extensions / archJSON.language, NOT diagram.language
     if (new ExtensionAccessor(archJSON).hasAtlasExtension()) {
-      await this.generateAtlasOutput(archJSON, paths, diagram, pool);
+      return this.generateAtlasOutput(archJSON, paths, diagram, pool);
     } else if (level === 'package' && archJSON.extensions?.tsAnalysis?.moduleGraph) {
       await this.generateTsModuleGraphOutput(archJSON, paths, diagram, pool);
+      return [paths.paths.mmd];
     } else if (level === 'package' && archJSON.language === 'cpp') {
       await this.generateCppPackageOutput(archJSON, paths, pool);
+      return [paths.paths.mmd];
     } else {
-      await this.generateDefaultOutput(archJSON, paths, level, diagram, pool);
+      return this.generateDefaultOutput(archJSON, paths, level, diagram, pool);
     }
   }
 
@@ -298,7 +304,7 @@ export class DiagramOutputRouter {
     level: DetailLevel,
     diagram: DiagramConfig,
     pool: MermaidRenderWorkerPool
-  ): Promise<void> {
+  ): Promise<string[]> {
     const renderOptions = this.buildRenderOptions();
     const mermaidGenerator = new MermaidDiagramGenerator(this.globalConfig, this.progress);
 
@@ -319,10 +325,12 @@ export class DiagramOutputRouter {
 
     const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
     const mermaidRenderer = new IsomorphicMermaidRenderer(this.buildRendererOptions());
+    const writtenFiles: string[] = [];
 
     for (const job of jobs) {
       await fs.ensureDir(path.dirname(job.outputPath.source));
       await fs.writeFile(job.outputPath.source, job.diagramCode, 'utf-8');
+      writtenFiles.push(job.outputPath.source);
 
       if (await this.renderCache.checkHit(job.outputPath.source, job.diagramCode, renderOptions)) {
         continue; // Cache hit — skip rendering
@@ -349,6 +357,8 @@ export class DiagramOutputRouter {
 
       await this.renderCache.writeHash(job.outputPath.source, job.diagramCode, renderOptions);
     }
+
+    return writtenFiles;
   }
 
   /**
@@ -366,7 +376,7 @@ export class DiagramOutputRouter {
     paths: OutputPaths,
     diagram: DiagramConfig,
     pool: MermaidRenderWorkerPool
-  ): Promise<void> {
+  ): Promise<string[]> {
     const { AtlasRenderer } = await import('@/plugins/golang/atlas/renderers/atlas-renderer.js');
     const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
@@ -390,6 +400,8 @@ export class DiagramOutputRouter {
 
     console.error('\n  Generating Go Architecture Atlas...');
 
+    const writtenFiles: string[] = [];
+
     await Promise.all(
       availableLayers.map(async (layer) => {
         const result = await renderer.render(
@@ -408,6 +420,7 @@ export class DiagramOutputRouter {
         // diagrams that exceed the pixel limit still produce MMD + SVG.
         await fs.ensureDir(path.dirname(layerPaths.mmd));
         await fs.writeFile(layerPaths.mmd, result.content, 'utf-8');
+        writtenFiles.push(layerPaths.mmd);
 
         const renderOptions = this.buildRenderOptions();
         if (await this.renderCache.checkHit(layerPaths.mmd, result.content, renderOptions)) {
@@ -443,8 +456,13 @@ export class DiagramOutputRouter {
     // Save full Atlas JSON alongside the layer diagrams
     const atlasJsonPath = `${basePath}-atlas.json`;
     await fs.writeJson(atlasJsonPath, atlas, { spaces: 2 });
+    writtenFiles.push(atlasJsonPath);
     console.error(`  Atlas JSON: ${atlasJsonPath}`);
     console.error(`\n  Atlas layers: ${availableLayers.join(', ')}`);
+
+    // Layer renders run concurrently; sort so the returned order (and the
+    // index.md listing) is stable across runs.
+    return writtenFiles.sort();
   }
 
   /**

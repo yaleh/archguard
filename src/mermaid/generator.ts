@@ -47,6 +47,38 @@ function entityTypeToClassDef(
 }
 
 /**
+ * Escape a namespace identifier while preserving dots.
+ *
+ * Directory-aware groups encode their hierarchy as a dotted path
+ * (`packages.quay.src`): Mermaid 11 parses dotted namespace identifiers, but
+ * does NOT support nested `namespace` blocks (a nested block is a parse error).
+ * The regular escapeId() would turn every dot into `_`, erasing the hierarchy.
+ */
+export function escapeNamespaceId(id: string): string {
+  if (!id) return 'Unknown';
+  return id.replace(/<[^>]*>$/g, '').replace(/[^a-zA-Z0-9_.]/g, '_');
+}
+
+/**
+ * Namespace identifier for a group: the dotted directory path when the group
+ * was directory-derived, otherwise the explicit group name.
+ */
+function namespaceIdForGroup(group: PackageGroup): string {
+  const raw = group.path && group.path.length > 0 ? group.path.join('.') : group.name;
+  return escapeNamespaceId(raw);
+}
+
+/**
+ * Deterministic base name for a group's split output file. Uses the dotted
+ * directory path so two directories with the same leaf component cannot
+ * collide (e.g. `src/user` vs `lib/user`).
+ */
+function outputNameForGroup(group: PackageGroup): string {
+  return group.path && group.path.length > 0 ? group.path.join('.') : group.name;
+}
+
+
+/**
  * Validated Mermaid Generator
  * Generates Mermaid class diagrams with full validation
  */
@@ -170,7 +202,7 @@ export class ValidatedMermaidGenerator {
       }
       // Skip empty namespaces — Mermaid classDiagram does not allow empty namespace blocks
       if (entityLines.length === 0) continue;
-      lines.push(`  namespace ${escapeId(group.name)} {`);
+      lines.push(`  namespace ${namespaceIdForGroup(group)} {`);
       lines.push(...entityLines);
       lines.push('  }');
     }
@@ -317,7 +349,7 @@ export class ValidatedMermaidGenerator {
         }
         // Skip empty namespaces — Mermaid classDiagram does not allow empty namespace blocks
         if (entityLines.length === 0) continue;
-        lines.push(`  namespace ${escapeId(group.name)} {`);
+        lines.push(`  namespace ${namespaceIdForGroup(group)} {`);
         lines.push(...entityLines);
         lines.push('  }');
       }
@@ -412,7 +444,7 @@ export class ValidatedMermaidGenerator {
         }
         // Skip empty namespaces — Mermaid classDiagram does not allow empty namespace blocks
         if (entityLines.length === 0) continue;
-        lines.push(`  namespace ${escapeId(group.name)} {`);
+        lines.push(`  namespace ${namespaceIdForGroup(group)} {`);
         lines.push(...entityLines);
         lines.push('  }');
       }
@@ -566,11 +598,14 @@ export class ValidatedMermaidGenerator {
       return [{ name: null, content: this.generate() }];
     }
 
-    // Split: build one diagram per visible group
+    // Split: build one diagram per visible group. Groups that are still larger
+    // than maxNodesPerDiagram are chunked deterministically (in ArchJSON order)
+    // so an unusually large flat directory cannot produce one unreadable file.
     const knownEntityIds = new Set(visibleEntities.map((e) => e.id));
     const knownEntityNames = new Set(visibleEntities.map((e) => e.name));
 
     const results: Array<{ name: string | null; content: string }> = [];
+    const chunkSize = Math.max(1, maxNodesPerDiagram);
 
     for (const group of visibleGroups) {
       const groupEntityIdSet = new Set(group.entities);
@@ -578,94 +613,115 @@ export class ValidatedMermaidGenerator {
 
       if (groupEntities.length === 0) continue;
 
-      const groupEntityNames = new Set(groupEntities.map((e) => e.name));
+      const baseName = outputNameForGroup(group);
 
-      const lines: string[] = ['classDiagram'];
-
-      // Emit semantic classDef block
-      for (const [name, style] of Object.entries(ENTITY_CLASSDEF_STYLES)) {
-        lines.push(`  classDef ${name} ${style}`);
+      for (let offset = 0; offset < groupEntities.length; offset += chunkSize) {
+        const chunk = groupEntities.slice(offset, offset + chunkSize);
+        const chunkIndex = offset / chunkSize;
+        const name = chunkIndex === 0 ? baseName : `${baseName}.part${chunkIndex + 1}`;
+        results.push({
+          name,
+          content: this.buildSplitDiagram(group, chunk, knownEntityIds, knownEntityNames),
+        });
       }
-      lines.push('');
+    }
 
-      // Emit namespace block for this group
-      lines.push(`  namespace ${escapeId(group.name)} {`);
-      for (const entity of groupEntities) {
-        lines.push(..._generateClassDefinition(entity, 2, this.options));
-      }
-      lines.push('  }');
+    return results;
+  }
 
-      // Python: module-level source IDs (e.g. `pkg.mod`) map to class-level entity IDs
-      const modulePrefixIndexGroup = this.buildModulePrefixIndex(knownEntityIds);
+  /**
+   * Build one split diagram for a group (or a chunk of it).
+   */
+  private buildSplitDiagram(
+    group: PackageGroup,
+    groupEntities: ArchJSON['entities'],
+    knownEntityIds: Set<string>,
+    knownEntityNames: Set<string>
+  ): string {
+    const groupEntityIdSet = new Set(groupEntities.map((e) => e.id));
+    const groupEntityNames = new Set(groupEntities.map((e) => e.name));
 
-      // Build a set of entity names for the current group only
-      const groupEntityNameSet = new Set(groupEntities.map((e) => e.name));
+    const lines: string[] = ['classDiagram'];
 
-      // Track cross-group targets that need stub declarations to avoid undeclared ghost nodes.
-      // A cross-group target is a relation target that belongs to a known entity in a DIFFERENT
-      // group — it would be emitted in a relation line but never declared in this group's
-      // namespace block, causing Mermaid to render it as an unstyled ghost node.
-      const crossGroupTargetNames = new Set<string>();
+    // Emit semantic classDef block
+    for (const [name, style] of Object.entries(ENTITY_CLASSDEF_STYLES)) {
+      lines.push(`  classDef ${name} ${style}`);
+    }
+    lines.push('');
 
-      // Emit relations: source must be in this group (or a module prefix of a group entity);
-      // target must be a known entity or a non-noisy external ghost node.
-      for (const relation of this.archJson.relations) {
-        const sourceInGroupDirect =
-          groupEntityIdSet.has(relation.source) || groupEntityNames.has(relation.source);
-        const sourceViaPrefix = !sourceInGroupDirect && modulePrefixIndexGroup.has(relation.source);
-        const sourceInGroup = sourceInGroupDirect || sourceViaPrefix;
-        const targetKnown =
-          knownEntityIds.has(relation.target) || knownEntityNames.has(relation.target);
-        // Python module-level: skip noisy check for target when source matched via prefix
-        const targetOk = targetKnown || sourceViaPrefix || !isNoisyTarget(relation.target);
-        if (sourceInGroup && targetOk) {
-          {
-            const _line = _generateRelationLine(relation, this.entityIdToName);
-            if (_line !== null) {
-              lines.push(`  ${_line}`);
-              // If the target is a known entity from a different group, track it for stub emission
-              const targetInCurrentGroup =
-                groupEntityIdSet.has(relation.target) || groupEntityNameSet.has(relation.target);
-              if (!targetInCurrentGroup && targetKnown) {
-                // Resolve the target's display name (same logic as _generateRelationLine)
-                const targetDisplayName =
-                  this.entityIdToName.get(relation.target) ??
-                  (knownEntityNames.has(relation.target) ? relation.target : null);
-                if (targetDisplayName !== null) {
-                  crossGroupTargetNames.add(normalizeEntityName(targetDisplayName));
-                }
+    // Emit namespace block for this group. Directory groups use their dotted
+    // path (`packages.quay.src`) so the hierarchy stays visible in the file.
+    lines.push(`  namespace ${namespaceIdForGroup(group)} {`);
+    for (const entity of groupEntities) {
+      lines.push(..._generateClassDefinition(entity, 2, this.options));
+    }
+    lines.push('  }');
+
+    // Python: module-level source IDs (e.g. `pkg.mod`) map to class-level entity IDs
+    const modulePrefixIndexGroup = this.buildModulePrefixIndex(knownEntityIds);
+
+    // Track cross-group targets that need stub declarations to avoid undeclared ghost nodes.
+    // A cross-group target is a relation target that belongs to a known entity in a DIFFERENT
+    // group — it would be emitted in a relation line but never declared in this group's
+    // namespace block, causing Mermaid to render it as an unstyled ghost node.
+    const crossGroupTargetNames = new Set<string>();
+
+    // Emit relations: source must be in this group (or a module prefix of a group entity);
+    // target must be a known entity or a non-noisy external ghost node.
+    for (const relation of this.archJson.relations) {
+      const sourceInGroupDirect =
+        groupEntityIdSet.has(relation.source) || groupEntityNames.has(relation.source);
+      const sourceViaPrefix = !sourceInGroupDirect && modulePrefixIndexGroup.has(relation.source);
+      const sourceInGroup = sourceInGroupDirect || sourceViaPrefix;
+      const targetKnown =
+        knownEntityIds.has(relation.target) || knownEntityNames.has(relation.target);
+      // Python module-level: skip noisy check for target when source matched via prefix
+      const targetOk = targetKnown || sourceViaPrefix || !isNoisyTarget(relation.target);
+      if (sourceInGroup && targetOk) {
+        {
+          const _line = _generateRelationLine(relation, this.entityIdToName);
+          if (_line !== null) {
+            lines.push(`  ${_line}`);
+            // If the target is a known entity from a different group, track it for stub emission
+            const targetInCurrentGroup =
+              groupEntityIdSet.has(relation.target) || groupEntityNames.has(relation.target);
+            if (!targetInCurrentGroup && targetKnown) {
+              // Resolve the target's display name (same logic as _generateRelationLine)
+              const targetDisplayName =
+                this.entityIdToName.get(relation.target) ??
+                (knownEntityNames.has(relation.target) ? relation.target : null);
+              if (targetDisplayName !== null) {
+                crossGroupTargetNames.add(normalizeEntityName(targetDisplayName));
               }
             }
           }
         }
       }
-
-      // Emit stub declarations for cross-group targets so Mermaid does not render ghost nodes
-      if (crossGroupTargetNames.size > 0) {
-        lines.push('');
-        lines.push(
-          '  %% Cross-group stubs (targets from other groups — declared to prevent ghost nodes)'
-        );
-        for (const stubName of crossGroupTargetNames) {
-          lines.push(`  class ${escapeId(stubName)}`);
-        }
-      }
-
-      // Emit node type annotations
-      lines.push('');
-      lines.push('  %% Node type annotations');
-      const seenAnnotations = new Set<string>();
-      for (const entity of groupEntities) {
-        const normalizedId = escapeId(normalizeEntityName(entity.name));
-        if (seenAnnotations.has(normalizedId)) continue;
-        seenAnnotations.add(normalizedId);
-        lines.push(`  class ${normalizedId}:::${entityTypeToClassDef(entity.type)}`);
-      }
-
-      results.push({ name: group.name, content: this.postProcess(lines.join('\n')) });
     }
 
-    return results;
+    // Emit stub declarations for cross-group targets so Mermaid does not render ghost nodes
+    if (crossGroupTargetNames.size > 0) {
+      lines.push('');
+      lines.push(
+        '  %% Cross-group stubs (targets from other groups — declared to prevent ghost nodes)'
+      );
+      for (const stubName of crossGroupTargetNames) {
+        lines.push(`  class ${escapeId(stubName)}`);
+      }
+    }
+
+    // Emit node type annotations
+    lines.push('');
+    lines.push('  %% Node type annotations');
+    const seenAnnotations = new Set<string>();
+    for (const entity of groupEntities) {
+      const normalizedId = escapeId(normalizeEntityName(entity.name));
+      if (seenAnnotations.has(normalizedId)) continue;
+      seenAnnotations.add(normalizedId);
+      lines.push(`  class ${normalizedId}:::${entityTypeToClassDef(entity.type)}`);
+    }
+
+    return this.postProcess(lines.join('\n'));
   }
 
   /**

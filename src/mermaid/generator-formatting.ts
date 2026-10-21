@@ -64,7 +64,19 @@ export function sanitizeType(type: string): string {
     /^(Partial|Required|Readonly|Pick|Omit|Record|Exclude|Extract|ReturnType|Parameters|DeepPartial)<.+>$/;
   if (advancedTypePattern.test(simplified)) return 'any';
 
-  simplified = simplified.replace(/\([^)]*\)\s*=>\s*/g, 'Function');
+  // Function types are display-only in a class diagram. Rather than trying to
+  // surgically strip the return type (which produced unparseable member lines
+  // such as `Functionvoid)[]` and curried leftovers like
+  // `Function string, descendant: string) => boolean` — both of which crash
+  // Mermaid's ClassMember parser instead of failing as a syntax error), collapse
+  // any arrow type to a single safe token.
+  if (simplified.includes('=>')) {
+    const compact = simplified.replace(/\s+/g, '');
+    if (/\[\]$/.test(compact) || /^(Readonly)?Array</.test(compact)) {
+      return 'Array';
+    }
+    return 'Function';
+  }
   while (simplified.includes('Promise<')) {
     simplified = simplified.replace(/(\w+)<([^<>]*)>/g, '$1');
     simplified = simplified.replace(/\bPromise\b/g, 'any');

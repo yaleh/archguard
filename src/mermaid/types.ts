@@ -27,6 +27,16 @@ export interface PackageGroup {
   name: string;
   entities: string[]; // entity IDs
   reasoning?: string;
+  /**
+   * Directory segments the group was derived from, e.g. `['src', 'user']`.
+   *
+   * Present for groups produced by directory-aware grouping. The generator
+   * uses it both as the namespace name (`src.user` — Mermaid classDiagram does
+   * not support nested `namespace` blocks) and as the deterministic file-name
+   * stem when the diagram is split. Absent for explicit custom/LLM groups,
+   * whose `name` remains the namespace id.
+   */
+  path?: string[];
 }
 
 /**

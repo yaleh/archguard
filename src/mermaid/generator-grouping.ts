@@ -19,5 +19,8 @@ export function groupEntitiesByPackage(
     name: pkg.name,
     entities: pkg.entities.filter((id) => archJson.entities.some((entity) => entity.id === id)),
     reasoning: pkg.reasoning,
+    // Directory-aware groups carry their path so the generator can emit a
+    // dotted namespace id (`src.user`) instead of a flattened display name.
+    ...(pkg.path && pkg.path.length > 0 ? { path: pkg.path } : {}),
   }));
 }
