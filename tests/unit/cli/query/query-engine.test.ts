@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { QueryEngine } from '@/cli/query/query-engine.js';
-import type { ArchJSON, Entity } from '@/types/index.js';
+import type { ArchJSON, Entity, RelationType } from '@/types/index.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
@@ -1987,5 +1987,96 @@ describe('QueryEngine — package cycle edge evidence', () => {
 
     expect(result.cycles).toHaveLength(1);
     expect(result.cycles[0].edges).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// relationTypes on edge-list output (gap-query-relation-type-filter)
+// ---------------------------------------------------------------------------
+
+describe('applyOutputOptions — relationTypes filter for edge-list', () => {
+  interface FlatEdgeList {
+    entities: Array<{ id: string; name: string }>;
+    relations: Array<{ from?: string; to?: string; type?: string }>;
+    totalRelations?: number;
+  }
+
+  const root = makeEntity('Root', 'Root');
+  const dep = makeEntity('Dep', 'Dep');
+  const called = makeEntity('Called', 'Called');
+  const composed = makeEntity('Composed', 'Composed');
+  const base = makeEntity('Base', 'Base');
+
+  const archJson = makeArchJson({
+    entities: [root, dep, called, composed, base],
+    relations: [
+      { id: 'r1', type: 'dependency', source: 'Root', target: 'Dep' },
+      { id: 'r2', type: 'call', source: 'Root', target: 'Called' },
+      { id: 'r3', type: 'composition', source: 'Root', target: 'Composed' },
+      { id: 'r4', type: 'inheritance', source: 'Root', target: 'Base' },
+    ],
+  });
+
+  function edgeListOf(relationTypes?: readonly RelationType[]): FlatEdgeList {
+    const engine = createEngine(archJson);
+    const raw = engine.relationQueryService.getDependencies('Root', 1, relationTypes);
+    return engine.applyOutputOptions(raw, {
+      outputScope: 'method',
+      queryFormat: 'edge-list',
+      anchorNames: ['Root'],
+      relationTypes,
+    }) as FlatEdgeList;
+  }
+
+  it('omitted relationTypes serializes every type (unchanged behavior)', () => {
+    const output = edgeListOf();
+    expect(output.entities.map((e) => e.name)).toEqual(['Dep', 'Called', 'Composed', 'Base']);
+    expect(output.relations.map((r) => r.type)).toEqual([
+      'dependency',
+      'call',
+      'composition',
+      'inheritance',
+    ]);
+  });
+
+  it('provided relationTypes narrows relations while entities keep their closure', () => {
+    const output = edgeListOf(['inheritance', 'composition']);
+    expect(output.entities.map((e) => e.name)).toEqual(['Base', 'Composed']);
+    expect(output.relations).toEqual([
+      { from: 'Root', to: 'Composed', type: 'composition' },
+      { from: 'Root', to: 'Base', type: 'inheritance' },
+    ]);
+  });
+
+  it('class-scope call aggregation is not surfaced as a requested type', () => {
+    // At class scope a call edge is rewritten to dependency. Filtering happens
+    // after scope normalization, so asking for ["dependency"] must not smuggle
+    // the call-originated edge in.
+    const engine = createEngine(archJson);
+    const raw = engine.relationQueryService.getDependencies('Root', 1, ['dependency']);
+    const output = engine.applyOutputOptions(raw, {
+      outputScope: 'class',
+      queryFormat: 'edge-list',
+      anchorNames: ['Root'],
+      relationTypes: ['dependency'],
+    }) as FlatEdgeList;
+    expect(output.relations).toEqual([{ from: 'Root', to: 'Dep', type: 'dependency' }]);
+  });
+
+  it('totalRelations counts the type-filtered set before topN', () => {
+    const engine = createEngine(archJson);
+    const raw = engine.relationQueryService.getDependencies('Root', 1, [
+      'inheritance',
+      'composition',
+    ]);
+    const output = engine.applyOutputOptions(raw, {
+      outputScope: 'method',
+      queryFormat: 'edge-list',
+      anchorNames: ['Root'],
+      relationTypes: ['inheritance', 'composition'],
+      topN: 1,
+    }) as FlatEdgeList;
+    expect(output.totalRelations).toBe(2);
+    expect(output.relations).toHaveLength(1);
   });
 });

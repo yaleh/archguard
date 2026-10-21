@@ -2,6 +2,20 @@
 id: gap-query-relation-type-filter
 title: get_dependencies/get_dependents 无法按关系类型过滤：BFS 邻接混入
   call/composition，工具描述还声称不含 call 边
+status: done
+labels:
+  - gap
+  - query
+  - mcp
+parent: null
+children: []
+extra:
+  schema: execution
+---
+---
+id: gap-query-relation-type-filter
+title: get_dependencies/get_dependents 无法按关系类型过滤：BFS 邻接混入
+  call/composition，工具描述还声称不含 call 边
 status: ready
 labels:
   - gap
@@ -33,14 +47,14 @@ extra:
 
 ## AC
 
-- [ ] 夹具同时含 dependency / call / composition / inheritance 四类边：`getDependencies(name, 1, ['inheritance'])` 只返回 inheritance 目标；省略 `relationTypes` 时返回结果与修复前逐项一致（顺序也一致）
-- [ ] `getDependents` 对称通过：按类型过滤只返回对应方向、对应类型的邻居
-- [ ] MCP `archguard_get_dependencies` / `archguard_get_dependents` 的 schema 接受 `relationTypes`（合法枚举），非法值被拒绝；省略时行为不变
-- [ ] `queryFormat=edge-list` + `relationTypes` 时，`relations` 只包含所选类型，`entities` 仍覆盖对应闭包
-- [ ] 工具描述修正：不再声称默认结果不含 call 边；明确「默认全部内部类型，可用 relationTypes 收窄」
-- [ ] 真实数据（claudecodeui `93e0a992` 副本）：对存在继承边的实体分别用默认与 `['inheritance']` 查询，默认结果包含 dependency/call/composition，过滤结果只含继承；同时记录外部端点不在结果里（外部关系保留是独立任务，不属于本 AC）
-- [ ] 不破坏现有调用：CLI `query --deps-of/--used-by` 与 cognitive-summary 的现有调用（不传第三参）结果不变
-- [ ] `bash scripts/test.sh --for-task gap-query-relation-type-filter` 与 `npm run type-check` 通过
+- [x] 夹具同时含 dependency / call / composition / inheritance 四类边：`getDependencies(name, 1, ['inheritance'])` 只返回 inheritance 目标；省略 `relationTypes` 时返回结果与修复前逐项一致（顺序也一致）
+- [x] `getDependents` 对称通过：按类型过滤只返回对应方向、对应类型的邻居
+- [x] MCP `archguard_get_dependencies` / `archguard_get_dependents` 的 schema 接受 `relationTypes`（合法枚举），非法值被拒绝；省略时行为不变
+- [x] `queryFormat=edge-list` + `relationTypes` 时，`relations` 只包含所选类型，`entities` 仍覆盖对应闭包
+- [x] 工具描述修正：不再声称默认结果不含 call 边；明确「默认全部内部类型，可用 relationTypes 收窄」
+- [x] 真实数据（claudecodeui `93e0a992` 副本）：对存在继承边的实体分别用默认与 `['inheritance']` 查询，默认结果包含 dependency/call/composition，过滤结果只含继承；同时记录外部端点不在结果里（外部关系保留是独立任务，不属于本 AC）
+- [x] 不破坏现有调用：CLI `query --deps-of/--used-by` 与 cognitive-summary 的现有调用（不传第三参）结果不变
+- [x] `bash scripts/test.sh --for-task gap-query-relation-type-filter` 与 `npm run type-check` 通过
 
 ## DoD
 

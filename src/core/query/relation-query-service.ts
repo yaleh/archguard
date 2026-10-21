@@ -9,7 +9,7 @@
  * No import from query-engine.ts to avoid circular dependencies.
  */
 
-import type { ArchJSON, Entity } from '@/types/index.js';
+import type { ArchJSON, Entity, RelationType } from '@/types/index.js';
 import type { ArchIndex } from './arch-index.js';
 import type { EntityQueryService } from './entity-query-service.js';
 
@@ -20,14 +20,37 @@ export class RelationQueryService {
     private readonly entityQueryService: EntityQueryService
   ) {}
 
-  /** BFS along the dependencies direction (what entityName depends on). */
-  getDependencies(entityName: string, depth: number = 1): Entity[] {
-    return this.bfs(entityName, 'dependencies', depth);
+  /**
+   * BFS along the dependencies direction (what entityName depends on).
+   *
+   * @param relationTypes When omitted, every internal relation type in the shared
+   *   adjacency (`index.dependencies`) is followed — identical to the historical
+   *   behavior. When provided, the traversal only follows edges whose raw relation
+   *   type is in this list (forward direction, source → target). An empty array
+   *   therefore yields no neighbors.
+   */
+  getDependencies(
+    entityName: string,
+    depth: number = 1,
+    relationTypes?: readonly RelationType[]
+  ): Entity[] {
+    if (relationTypes === undefined) return this.bfs(entityName, 'dependencies', depth);
+    return this.bfsByType(entityName, depth, relationTypes, 'dependencies');
   }
 
-  /** BFS along the dependents direction (what depends on entityName). */
-  getDependents(entityName: string, depth: number = 1): Entity[] {
-    return this.bfs(entityName, 'dependents', depth);
+  /**
+   * BFS along the dependents direction (what depends on entityName).
+   *
+   * @param relationTypes Same contract as {@link getDependencies}; edges are
+   *   traversed in reverse (target → source) but only for the selected types.
+   */
+  getDependents(
+    entityName: string,
+    depth: number = 1,
+    relationTypes?: readonly RelationType[]
+  ): Entity[] {
+    if (relationTypes === undefined) return this.bfs(entityName, 'dependents', depth);
+    return this.bfsByType(entityName, depth, relationTypes, 'dependents');
   }
 
   /** Find entities that implement the given interface (relation.type === 'implementation'). */
@@ -139,6 +162,63 @@ export class RelationQueryService {
           currentDepth: currentDepth + 1,
         });
       }
+    }
+
+    return result;
+  }
+
+  /**
+   * Build a direction-oriented adjacency map restricted to the selected relation
+   * types, sourced from `index.relationsByType` (never from the mixed
+   * `index.dependencies` / `index.dependents` tables). Traversal order is the
+   * caller's type order, then ArchJSON relation order within each type.
+   */
+  private buildTypedAdjacency(
+    relationTypes: readonly RelationType[],
+    direction: 'dependencies' | 'dependents'
+  ): Map<string, string[]> {
+    const adjacency = new Map<string, string[]>();
+    for (const type of relationTypes) {
+      for (const [source, target] of this.index.relationsByType[type] ?? []) {
+        const from = direction === 'dependencies' ? source : target;
+        const to = direction === 'dependencies' ? target : source;
+        const bucket = adjacency.get(from);
+        if (bucket) bucket.push(to);
+        else adjacency.set(from, [to]);
+      }
+    }
+    return adjacency;
+  }
+
+  private bfsByType(
+    startName: string,
+    maxDepth: number,
+    relationTypes: readonly RelationType[],
+    direction: 'dependencies' | 'dependents'
+  ): Entity[] {
+    const clampedDepth = Math.max(1, Math.min(5, maxDepth));
+    const startIds = this.index.nameToIds[startName] ?? [];
+    if (startIds.length === 0) return [];
+
+    const adjacency = this.buildTypedAdjacency(relationTypes, direction);
+    const visited = new Set<string>(startIds);
+    const result: Entity[] = [];
+    let frontier = [...startIds];
+
+    for (let d = 0; d < clampedDepth; d++) {
+      const nextFrontier: string[] = [];
+      for (const id of frontier) {
+        for (const neighborId of adjacency.get(id) ?? []) {
+          if (!visited.has(neighborId)) {
+            visited.add(neighborId);
+            nextFrontier.push(neighborId);
+            const entity = this.entityQueryService.getById(neighborId);
+            if (entity) result.push(entity);
+          }
+        }
+      }
+      frontier = nextFrontier;
+      if (frontier.length === 0) break;
     }
 
     return result;
