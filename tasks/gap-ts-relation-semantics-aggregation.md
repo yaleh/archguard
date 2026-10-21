@@ -2,7 +2,7 @@
 id: gap-ts-relation-semantics-aggregation
 title: TS 关系语义与 UML 不符：构造注入被标成 composition（过声明），且 dependency/composition
   边界无文档（下游只能保守降级）
-status: todo
+status: ready
 labels:
   - gap
   - parser
