@@ -1,7 +1,7 @@
 ---
 id: gap-develop-lint-errors
 title: CI develop Lint 步红（47 errors）：lint:fix + 手动清 3 个 no-unused-vars
-status: ready
+status: done
 labels:
   - gap
   - defect
