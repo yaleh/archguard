@@ -24,12 +24,12 @@ router `route()` 由单分支改为按集合循环。选择接口只决定「要
 
 ## AC
 
-- [ ] src/types/config-mermaid.ts 增 `OutputFormats = OutputFormat[]`；src/cli/utils/format-selection.ts 的 `resolveFormats()` 归一 CLI/config/MCP 三来源为有序去重集合（优先级覆盖不并集、空→默认 {mermaid}）
-- [ ] config-loader：全局与每 diagram 的 `format: z.enum([...])` 改 `formats: z.array(z.enum([...]))`，删除 `format` 键（配置含旧 `format` 键时拒绝、不静默忽略）；GlobalConfig/DiagramConfig/CLIOptions 的 `format` 字段改 `formats`
-- [ ] CLI：`-f, --format <type>` 改可重复 collect（不做逗号简写），帮助文本 `mermaid|json|plantuml（可重复，默认 mermaid）`
-- [ ] MCP analyze-tool：`format: z.enum([...])` 改 `formats: z.array(z.enum([...]))`
-- [ ] router `route()` 按 resolveFormats 集合循环分发 json/plantuml/mermaid；diagram-pipeline-runner 的 resultPaths 按集合累积
-- [ ] 测试：config-loader `formats` 数组解析 + 旧 `format` 键拒绝；resolveFormats 优先级；router 多格式（plantuml+mermaid 同产 .puml 与 .mmd/.svg/.png）；CLI 重复 -f；MCP formats 数组
+- [x] src/types/config-mermaid.ts 增 `OutputFormats = OutputFormat[]`；src/cli/utils/format-selection.ts 的 `resolveFormats()` 归一 CLI/config/MCP 三来源为有序去重集合（优先级覆盖不并集、空→默认 {mermaid}）
+- [x] config-loader：全局与每 diagram 的 `format: z.enum([...])` 改 `formats: z.array(z.enum([...]))`，删除 `format` 键（配置含旧 `format` 键时拒绝、不静默忽略）；GlobalConfig/DiagramConfig/CLIOptions 的 `format` 字段改 `formats`
+- [x] CLI：`-f, --format <type>` 改可重复 collect（不做逗号简写），帮助文本 `mermaid|json|plantuml（可重复，默认 mermaid）`
+- [x] MCP analyze-tool：`format: z.enum([...])` 改 `formats: z.array(z.enum([...]))`
+- [x] router `route()` 按 resolveFormats 集合循环分发 json/plantuml/mermaid；diagram-pipeline-runner 的 resultPaths 按集合累积
+- [x] 测试：config-loader `formats` 数组解析 + 旧 `format` 键拒绝；resolveFormats 优先级；router 多格式（plantuml+mermaid 同产 .puml 与 .mmd/.svg/.png）；CLI 重复 -f；MCP formats 数组
 
 ## DoD
 
@@ -46,11 +46,48 @@ router `route()` 由单分支改为按集合循环。选择接口只决定「要
 - src/cli/mcp/analyze-tool.ts
 - src/cli/processors/diagram-output-router.ts
 - src/cli/processors/diagram-pipeline-runner.ts
+- src/cli/processors/diagram-processor.ts
+- src/cli/analyze/run-analysis.ts
+- src/cli/analyze/normalize-to-diagrams.ts
+- src/cli/analyze/drift-baseline.ts
 - src/cli/utils/format-selection.ts
+- src/cli/utils/default-scope-planner.ts
+- src/cli/utils/cpp-project-structure-detector.ts
+- src/cli/utils/java-project-structure-detector.ts
+- src/cli/utils/kotlin-project-structure-detector.ts
 - tests/unit/cli/config-loader.test.ts
+- tests/unit/cli/config-loader-plantuml-removal.test.ts
 - tests/unit/cli/analyze-command.test.ts
+- tests/unit/cli/command.test.ts
 - tests/unit/cli/mcp/analyze-tool.test.ts
 - tests/unit/cli/processors/diagram-output-router.test.ts
+- tests/unit/cli/processors/diagram-output-router-split-outputs.test.ts
 - tests/unit/cli/processors/diagram-pipeline-runner.test.ts
+- tests/unit/cli/processors/diagram-processor.test.ts
+- tests/unit/cli/processors/diagram-processor-query-scopes.test.ts
+- tests/unit/cli/processors/arch-json-provider.test.ts
+- tests/unit/cli/processors/worker-pool-factory.test.ts
 - tests/unit/cli/utils/format-selection.test.ts
+- tests/unit/cli/utils/cpp-project-structure-detector.test.ts
+- tests/unit/cli/utils/java-project-structure-detector.test.ts
+- tests/unit/cli/utils/kotlin-project-structure-detector.test.ts
+- tests/unit/cli/analyze/normalize-to-diagrams.test.ts
+- tests/unit/cli/analyze/run-analysis.test.ts
+- tests/unit/cli/commands/analyze.test.ts
+- tests/unit/cli/commands/analyze-arch-health.test.ts
+- tests/unit/config-mermaid.test.ts
+- tests/unit/mermaid/diagram-generator-progress.test.ts
+- tests/unit/types/config.test.ts
+- tests/unit/types/project-semantics.test.ts
+- tests/integration/custom-config-path.test.ts
+- tests/integration/parallel-diagrams.test.ts
+- tests/integration/render-separation.test.ts
+- tests/integration/parser-pool.test.ts
+- tests/integration/project-semantics-sidecar.test.ts
+- tests/integration/detector-positive-controls.test.ts
+- tests/integration/cli/analyze-multilang.test.ts
+- tests/integration/cli/user-entry-contract.test.ts
+- tests/integration/cli-mcp/analyze-equivalence.test.ts
+- tests/integration/cli-mcp/cross-project-query.test.ts
+- tests/integration/cli-mcp/default-language-scopes.test.ts
 - tasks/gap-multi-output-format-selection.md
