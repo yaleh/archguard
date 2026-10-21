@@ -130,7 +130,7 @@ async function benchEndToEnd(testCase, code) {
         cliOptions: {
           sources: [path.join(project, 'src')],
           lang: testCase.language,
-          format: 'json',
+          formats: ['json'],
           cache: false,
         },
         reporter: silentReporter,
