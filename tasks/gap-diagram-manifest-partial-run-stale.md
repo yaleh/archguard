@@ -29,12 +29,12 @@ extra:
 
 ## AC
 
-- [ ] partial run（带 `sources` 或 `diagrams` 过滤）成功后，manifest 的 `lastRun` 晚于本次运行开始时间，且本次成功的 diagram name 被并入既有 entries（不是覆盖掉其他 entry）——用单测 + 真实 CLI 调用各验证一次
-- [ ] 负对照：partial run 不得触发 stale diagram 清理；未参与本次运行的既有 diagram 文件仍在磁盘上、仍留在 manifest 中
-- [ ] 全量 run 语义不变：manifest 仍以本次成功名单为准、仍能清理 stale；`tests/unit/cli/cache/diagram-manifest.test.ts` 与 `tests/unit/cli/analyze/run-analysis.test.ts` 现有用例保持通过
-- [ ] manifest 能枚举实际渲染产物：对产生 split 输出（多 layer/namespace 文件）的 class 图，该 diagram 的 `outputs` 列出全部 `.mmd`；用合成夹具机械断言 `outputs` 与 outputDir 下实际 `.mmd` 文件集合一致
-- [ ] 真实数据验证：把 `/data/home/yale/work/quay/.archguard` 复制到 `/tmp` 夹具（不改原仓库），带 `sources` 跑一次分析后，manifest `lastRun` 被刷新且不再出现“mmd 新、manifest 旧”
-- [ ] `bash scripts/test.sh --for-task gap-diagram-manifest-partial-run-stale` 与 `npm run type-check` 通过
+- [x] partial run（带 `sources` 或 `diagrams` 过滤）成功后，manifest 的 `lastRun` 晚于本次运行开始时间，且本次成功的 diagram name 被并入既有 entries（不是覆盖掉其他 entry）——用单测 + 真实 CLI 调用各验证一次
+- [x] 负对照：partial run 不得触发 stale diagram 清理；未参与本次运行的既有 diagram 文件仍在磁盘上、仍留在 manifest 中
+- [x] 全量 run 语义不变：manifest 仍以本次成功名单为准、仍能清理 stale；`tests/unit/cli/cache/diagram-manifest.test.ts` 与 `tests/unit/cli/analyze/run-analysis.test.ts` 现有用例保持通过
+- [x] manifest 能枚举实际渲染产物：对产生 split 输出（多 layer/namespace 文件）的 class 图，该 diagram 的 `outputs` 列出全部 `.mmd`；用合成夹具机械断言 `outputs` 与 outputDir 下实际 `.mmd` 文件集合一致
+- [x] 真实数据验证：把 `/data/home/yale/work/quay/.archguard` 复制到 `/tmp` 夹具（不改原仓库），带 `sources` 跑一次分析后，manifest `lastRun` 被刷新且不再出现“mmd 新、manifest 旧”
+- [x] `bash scripts/test.sh --for-task gap-diagram-manifest-partial-run-stale` 与 `npm run type-check` 通过
 
 ## DoD
 
@@ -46,5 +46,9 @@ extra:
 - src/cli/analyze/run-analysis.ts
 - src/cli/cache/diagram-manifest.ts
 - src/cli/processors/diagram-processor.ts
+- src/cli/processors/diagram-output-router.ts
+- src/cli/processors/diagram-pipeline-runner.ts
+- src/types/diagram-result.ts
 - tests/unit/cli/cache/diagram-manifest.test.ts
 - tests/unit/cli/analyze/run-analysis.test.ts
+- tests/unit/cli/processors/diagram-output-router-split-outputs.test.ts
