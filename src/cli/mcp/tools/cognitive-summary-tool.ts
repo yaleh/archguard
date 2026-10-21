@@ -74,9 +74,7 @@ const ID_LIKE_RE =
 
 /** Extract the trailing entity-name segment from an ID-like input. */
 function lastEntitySegment(value: string): string {
-  const afterSeparator = value.includes('::')
-    ? value.slice(value.lastIndexOf('::') + 2)
-    : value;
+  const afterSeparator = value.includes('::') ? value.slice(value.lastIndexOf('::') + 2) : value;
   return afterSeparator.slice(afterSeparator.lastIndexOf('.') + 1);
 }
 
@@ -119,9 +117,7 @@ function classifyMissingEntity(
     }
   }
 
-  const staleId = entityIds.find(
-    (id) => id.endsWith(`.${name}`) || id.endsWith(`::${name}`)
-  );
+  const staleId = entityIds.find((id) => id.endsWith(`.${name}`) || id.endsWith(`::${name}`));
   if (staleId !== undefined) {
     return {
       reason: 'in-graph-no-artifact',

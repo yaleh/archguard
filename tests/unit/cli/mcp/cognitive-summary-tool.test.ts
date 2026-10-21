@@ -287,7 +287,10 @@ describe('archguard_get_cognitive_summary — missing entity', () => {
       const tools = collectTools(server);
       const cb = tools.get('archguard_get_cognitive_summary');
 
-      const result = await cb({ entities: ['CrossScope', 'cross.ts.CrossScope'], projectRoot: tmp });
+      const result = await cb({
+        entities: ['CrossScope', 'cross.ts.CrossScope'],
+        projectRoot: tmp,
+      });
       const parsed = JSON.parse(result.content[0].text) as any[];
 
       expect(parsed[0].found).toBe(false);

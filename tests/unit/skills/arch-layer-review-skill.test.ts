@@ -159,9 +159,7 @@ describe('arch-layer-review skill — single-tree / architecture-health mode', (
     for (const conclusion of conclusions) {
       expect(Array.isArray(conclusion.evidence)).toBe(true);
       expect(conclusion.evidence.length).toBeGreaterThan(0);
-      expect(['converged', 'cosmetic', 'regressed', 'not-evaluated']).toContain(
-        conclusion.verdict
-      );
+      expect(['converged', 'cosmetic', 'regressed', 'not-evaluated']).toContain(conclusion.verdict);
     }
 
     // All four single-tree question classes are present.
@@ -199,9 +197,7 @@ describe('arch-layer-review skill — single-tree / architecture-health mode', (
 
     // The four-state vocabulary must not use pass/fail as a verdict value either.
     for (const conclusion of raw.judgment.conclusions) {
-      expect(['converged', 'cosmetic', 'regressed', 'not-evaluated']).toContain(
-        conclusion.verdict
-      );
+      expect(['converged', 'cosmetic', 'regressed', 'not-evaluated']).toContain(conclusion.verdict);
       expect(JSON.stringify(conclusion)).not.toMatch(/"pass"|"fail"/);
     }
   });
@@ -282,9 +278,7 @@ describe('arch-layer-review skill — drift / cycle-classification consumption',
       expect(typeof conclusion.recommendedDeclarationUpdate).toBe('string');
       expect(conclusion.recommendedDeclarationUpdate.length).toBeGreaterThan(0);
       // declarationStatus supplements the verdict — it is not a verdict itself.
-      expect(['converged', 'cosmetic', 'regressed', 'not-evaluated']).toContain(
-        conclusion.verdict
-      );
+      expect(['converged', 'cosmetic', 'regressed', 'not-evaluated']).toContain(conclusion.verdict);
     }
 
     // Every conclusion keeps a non-empty evidence array, exactly as before.
@@ -316,9 +310,7 @@ describe('arch-layer-review skill — drift / cycle-classification consumption',
     }
 
     for (const conclusion of raw.judgment.conclusions) {
-      expect(['converged', 'cosmetic', 'regressed', 'not-evaluated']).toContain(
-        conclusion.verdict
-      );
+      expect(['converged', 'cosmetic', 'regressed', 'not-evaluated']).toContain(conclusion.verdict);
       expect(JSON.stringify(conclusion)).not.toMatch(/"pass"|"fail"/);
     }
   });
@@ -330,8 +322,14 @@ describe('arch-layer-review skill — drift / cycle-classification consumption',
       path.join('references', 'goal-030-example-output.json'),
       path.join('references', 'archguard-selfreview-example-output.json'),
     ]) {
-      const agents = await fs.readFile(path.join('.agents', 'skills', 'arch-layer-review', rel), 'utf-8');
-      const plugin = await fs.readFile(path.join('plugin', 'skills', 'arch-layer-review', rel), 'utf-8');
+      const agents = await fs.readFile(
+        path.join('.agents', 'skills', 'arch-layer-review', rel),
+        'utf-8'
+      );
+      const plugin = await fs.readFile(
+        path.join('plugin', 'skills', 'arch-layer-review', rel),
+        'utf-8'
+      );
       expect(plugin).toBe(agents);
     }
   });

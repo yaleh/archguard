@@ -120,7 +120,9 @@ export function registerShapeSmellTools(server: McpServer, defaultRoot: string):
           // Discover source files. Explicit `sources` entries may be files or
           // directories (per the tool's own parameter description); expand any
           // directory entries to the .ts/.tsx files under them.
-          const sourceFiles = sources ? await expandSourceEntries(sources) : await discoverSources(root);
+          const sourceFiles = sources
+            ? await expandSourceEntries(sources)
+            : await discoverSources(root);
           if (!sourceFiles || sourceFiles.length === 0) {
             results.push({ layer: 'literal-dispersion', smells: [] });
             continue;
@@ -264,7 +266,13 @@ async function expandSourceEntries(entries: string[]): Promise<string[]> {
     }
     const pattern = path.join(entry, '**', '*.{ts,tsx}').replace(/\\/g, '/');
     const files = glob.globSync(pattern, {
-      ignore: ['**/node_modules/**', '**/*.test.ts', '**/*.spec.ts', '**/*.test.tsx', '**/*.spec.tsx'],
+      ignore: [
+        '**/node_modules/**',
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        '**/*.test.tsx',
+        '**/*.spec.tsx',
+      ],
     });
     expanded.push(...files);
   }

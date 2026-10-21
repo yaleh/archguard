@@ -10,14 +10,7 @@
  * tests/integration/plugin-install.test.ts for the end-to-end flow).
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import {
-  existsSync,
-  readFileSync,
-  mkdtempSync,
-  mkdirSync,
-  writeFileSync,
-  rmSync,
-} from 'node:fs';
+import { existsSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -306,8 +299,10 @@ describe('exact-core dependency pin is a single-source carrier (GOAL-001 / AC-00
     expect(readFileSync(path.join(dir, 'plugin/package.json'), 'utf8')).toBe(afterFirst);
   });
 
-  it('is wired into npm\'s `version` lifecycle right after the six-carrier generator', () => {
-    const pkg = readJson(path.join(repoRoot, 'package.json')) as { scripts?: Record<string, string> };
+  it("is wired into npm's `version` lifecycle right after the six-carrier generator", () => {
+    const pkg = readJson(path.join(repoRoot, 'package.json')) as {
+      scripts?: Record<string, string>;
+    };
     const versionScript = pkg.scripts?.version ?? '';
     expect(versionScript).toContain('sync-version-carriers');
     expect(versionScript).toContain('sync-plugin-core-pin');

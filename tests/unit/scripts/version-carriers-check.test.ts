@@ -68,7 +68,7 @@ function writePartialBumpFixture(
   dir: string,
   npmVersion: string,
   pluginVersion: string,
-  versionFile: string,
+  versionFile: string
 ): void {
   writeJson(dir, 'package.json', { name: 'fixture', version: npmVersion });
   writeJson(dir, 'package-lock.json', {
@@ -79,14 +79,16 @@ function writePartialBumpFixture(
   });
   writeJson(dir, '.claude-plugin/marketplace.json', {
     name: 'fixture',
-    plugins: [{ name: 'fixture', source: { source: 'npm', package: 'fixture', version: npmVersion } }],
+    plugins: [
+      { name: 'fixture', source: { source: 'npm', package: 'fixture', version: npmVersion } },
+    ],
   });
   writeJson(dir, 'plugin/package.json', { name: 'fixture-plugin', version: pluginVersion });
   writeJson(
     dir,
     'plugin/.claude-plugin/plugin.json',
     { name: 'fixture-plugin', version: pluginVersion },
-    '\t',
+    '\t'
   );
   fs.writeFileSync(path.join(dir, 'VERSION'), `${versionFile}\n`, 'utf-8');
 }
@@ -290,7 +292,7 @@ describe('check-version-carriers.sh — criterion is the external source VERSION
     });
   });
 
-  it('is wired as npm\'s `version` lifecycle so a bump cannot leave a partial-carrier window', () => {
+  it("is wired as npm's `version` lifecycle so a bump cannot leave a partial-carrier window", () => {
     const pkg = readJson(path.join(REPO_ROOT, 'package.json'));
     expect(pkg.scripts.version).toBeTruthy();
     expect(pkg.scripts.version).toContain('sync-version-carriers');
@@ -391,14 +393,14 @@ describe('sync-version-carriers.mjs --from-package (generator)', () => {
     expect(second).toEqual(first);
   });
 
-  it('preserves each file\'s own indentation (the real plugin manifest is tab-indented)', () => {
+  it("preserves each file's own indentation (the real plugin manifest is tab-indented)", () => {
     writePartialBumpFixture(dir, '0.1.40', '0.1.39', '0.1.39');
 
     expect(runGenerator(['--from-package', dir]).status).toBe(0);
 
     const pluginManifest = fs.readFileSync(
       path.join(dir, 'plugin/.claude-plugin/plugin.json'),
-      'utf-8',
+      'utf-8'
     );
     expect(pluginManifest).toContain('\t"version": "0.1.40"');
     expect(pluginManifest).not.toContain('  "version"');

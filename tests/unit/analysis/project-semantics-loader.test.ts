@@ -64,9 +64,7 @@ describe('project-semantics-loader', () => {
   describe('preflightProjectSemantics', () => {
     it('returns projectSemantics: "missing" when the sidecar is absent', async () => {
       const workDir = await makeWorkDir();
-      const { preflightProjectSemantics } = await import(
-        '@/analysis/project-semantics-loader.js'
-      );
+      const { preflightProjectSemantics } = await import('@/analysis/project-semantics-loader.js');
 
       await expect(preflightProjectSemantics(workDir)).resolves.toEqual({
         projectSemantics: 'missing',
@@ -80,9 +78,7 @@ describe('project-semantics-loader', () => {
         JSON.stringify({ additionalTestPatterns: ['**/*.integration.ts'] })
       );
 
-      const { preflightProjectSemantics } = await import(
-        '@/analysis/project-semantics-loader.js'
-      );
+      const { preflightProjectSemantics } = await import('@/analysis/project-semantics-loader.js');
 
       await expect(preflightProjectSemantics(workDir)).resolves.toEqual({
         projectSemantics: 'loaded',
@@ -97,9 +93,7 @@ describe('project-semantics-loader', () => {
         JSON.stringify({ suggestedDepth: '2' })
       );
 
-      const { preflightProjectSemantics } = await import(
-        '@/analysis/project-semantics-loader.js'
-      );
+      const { preflightProjectSemantics } = await import('@/analysis/project-semantics-loader.js');
 
       const result = await preflightProjectSemantics(workDir);
       expect(result.projectSemantics).toBe('invalid');

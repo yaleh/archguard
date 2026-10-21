@@ -125,11 +125,7 @@ export function findLayerViolations(relPath: string, source: string): string[] {
 function sourceFiles(root: string): string[] {
   return fs.readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(root, entry.name);
-    return entry.isDirectory()
-      ? sourceFiles(full)
-      : entry.name.endsWith('.ts')
-        ? [full]
-        : [];
+    return entry.isDirectory() ? sourceFiles(full) : entry.name.endsWith('.ts') ? [full] : [];
   });
 }
 
@@ -163,17 +159,18 @@ describe('layer import direction guard', () => {
   });
 
   it('does NOT flag a mere mention of the path inside a comment', () => {
-    const source = "// counterpart lives in @/cli/y.js\nconst x = 1;\n";
+    const source = '// counterpart lives in @/cli/y.js\nconst x = 1;\n';
     expect(findLayerViolations('src/core/x.ts', source)).toEqual([]);
   });
 
   it('does NOT flag a block-comment mention of the path', () => {
-    const source = "/* moved to @/cli/query/query-manifest.js */\nexport const y = 2;\n";
+    const source = '/* moved to @/cli/query/query-manifest.js */\nexport const y = 2;\n';
     expect(findLayerViolations('src/core/x.ts', source)).toEqual([]);
   });
 
   it('does NOT flag an allowed lower-layer import', () => {
-    const source = "import type { ArchJSON } from '@/types/index.js';\nimport { e } from '../core/e.js';\n";
+    const source =
+      "import type { ArchJSON } from '@/types/index.js';\nimport { e } from '../core/e.js';\n";
     expect(findLayerViolations('src/analysis/x.ts', source)).toEqual([]);
   });
 
@@ -203,12 +200,14 @@ describe('layer import direction guard', () => {
   });
 
   it('does NOT flag the plugin runtime importing a lower layer (core/parser-runtime)', () => {
-    const source = "import { ParserInitializationError } from '@/core/parser-runtime/parser-backend.js';\n";
+    const source =
+      "import { ParserInitializationError } from '@/core/parser-runtime/parser-backend.js';\n";
     expect(findLayerViolations('src/plugins/shared/parser-backend.ts', source)).toEqual([]);
   });
 
   it('does NOT flag the parser importing a lower layer (core/parser-runtime)', () => {
-    const source = "import type { ParserRuntimeKind } from '@/core/parser-runtime/syntax-tree.js';\n";
+    const source =
+      "import type { ParserRuntimeKind } from '@/core/parser-runtime/syntax-tree.js';\n";
     expect(findLayerViolations('src/parser/parse-worker-pool.ts', source)).toEqual([]);
   });
 

@@ -11,11 +11,7 @@ import path from 'path';
 import type { Readable } from 'node:stream';
 import type { EventEmitter } from 'node:events';
 import { z } from 'zod';
-import {
-  loadEngine,
-  type QueryContext,
-  type StalenessInfo,
-} from '../query/engine-loader.js';
+import { loadEngine, type QueryContext, type StalenessInfo } from '../query/engine-loader.js';
 import type {
   QueryEngine,
   EntitySummary,

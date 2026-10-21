@@ -155,7 +155,7 @@ describe('diagram-manifest', () => {
         path.join(outputDir, 'overview', 'package.mmd'),
       ]);
       expect(result?.outputs?.['class/all-classes']).toEqual([partialMmd]);
-      expect(new Date(result!.lastRun).getTime()).toBeGreaterThanOrEqual(before);
+      expect(new Date(result.lastRun).getTime()).toBeGreaterThanOrEqual(before);
     });
 
     it('appends a new diagram to the existing entry list', async () => {

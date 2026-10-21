@@ -302,7 +302,11 @@ describe('createCheckCommand', () => {
 
   it('one rule fails + failOnViolation=false → exits with code 0', async () => {
     const dir = await makeTmpDir();
-    mockConfig(dir, [{ metric: 'maxInDegree', op: '<', value: 20, message: 'No god files' }], false);
+    mockConfig(
+      dir,
+      [{ metric: 'maxInDegree', op: '<', value: 20, message: 'No god files' }],
+      false
+    );
     vi.mocked(loadSnapshots).mockResolvedValue([
       makeSnapshot({ metricVector: makeVector({ maxInDegree: 25 }) }),
     ]);
@@ -327,7 +331,11 @@ describe('createCheckCommand', () => {
 
   it('output includes rule message and actual value for failed rules', async () => {
     const dir = await makeTmpDir();
-    mockConfig(dir, [{ metric: 'maxInDegree', op: '<', value: 20, message: 'No god files' }], false);
+    mockConfig(
+      dir,
+      [{ metric: 'maxInDegree', op: '<', value: 20, message: 'No god files' }],
+      false
+    );
     vi.mocked(loadSnapshots).mockResolvedValue([
       makeSnapshot({ metricVector: makeVector({ maxInDegree: 25 }) }),
     ]);

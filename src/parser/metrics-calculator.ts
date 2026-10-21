@@ -32,9 +32,8 @@ export class MetricsCalculator {
     const cycles = computeCycles ? this.buildCycleInfos(archJSON, nonTrivialSCCs) : undefined;
 
     // fileStats stay class/method-only: package entities carry no source file.
-    const fileStats = !isAtlas && level !== 'package'
-      ? this.computeFileStats(archJSON, nonTrivialSCCs)
-      : undefined;
+    const fileStats =
+      !isAtlas && level !== 'package' ? this.computeFileStats(archJSON, nonTrivialSCCs) : undefined;
 
     return {
       level,

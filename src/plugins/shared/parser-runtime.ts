@@ -30,7 +30,7 @@
  * the selection record shape) is owned by the core parser-runtime layer and
  * re-exported here; this module keeps the concrete selection machinery.
  */
-import type { ParserBackend, ParserLanguage } from './parser-backend.js';
+import type { ParserLanguage } from './parser-backend.js';
 import { ParserInitializationError } from './parser-backend.js';
 import {
   NativeParserBackend,
@@ -41,7 +41,6 @@ import {
   type NativeModuleLoaders,
   type NativeParserLike,
 } from './native-parser-backend.js';
-import type { ParserRuntimeKind } from '@/core/parser-runtime/syntax-tree.js';
 import type { ParserRuntimePolicy } from '@/types/parser-runtime.js';
 import {
   hasParserRuntimeEnvOverride,

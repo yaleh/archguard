@@ -18,11 +18,7 @@ import { registerTools, wireParsePoolTeardown } from '@/cli/mcp/mcp-server.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { PassThrough } from 'node:stream';
 import { EventEmitter } from 'node:events';
-import {
-  loadEngine,
-  computeStaleness,
-  type StalenessInfo,
-} from '@/cli/query/engine-loader.js';
+import { loadEngine, computeStaleness, type StalenessInfo } from '@/cli/query/engine-loader.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 vi.mock('@/cli/query/engine-loader.js', async () => {
@@ -520,9 +516,7 @@ describe('archguard_detect_cycles — outputScope=package', () => {
         { from: 'src/a/b', to: 'src/a' },
       ]
     );
-    loadEngineMock.mockResolvedValue(
-      wrapArchJson(makeArchJsonWithModuleGraph(moduleGraph))
-    );
+    loadEngineMock.mockResolvedValue(wrapArchJson(makeArchJsonWithModuleGraph(moduleGraph)));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const cb = collectTools(server).get('archguard_detect_cycles');
@@ -539,12 +533,8 @@ describe('archguard_detect_cycles — outputScope=package', () => {
 
   it('negative control: dropping the mutual edge yields evaluated=true with cycles []', async () => {
     // Only a → a/b remains: no cycle at the directory granularity.
-    const moduleGraph = makeTsModuleGraph(['src/a', 'src/a/b'], [
-      { from: 'src/a', to: 'src/a/b' },
-    ]);
-    loadEngineMock.mockResolvedValue(
-      wrapArchJson(makeArchJsonWithModuleGraph(moduleGraph))
-    );
+    const moduleGraph = makeTsModuleGraph(['src/a', 'src/a/b'], [{ from: 'src/a', to: 'src/a/b' }]);
+    loadEngineMock.mockResolvedValue(wrapArchJson(makeArchJsonWithModuleGraph(moduleGraph)));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const cb = collectTools(server).get('archguard_detect_cycles');
@@ -557,9 +547,7 @@ describe('archguard_detect_cycles — outputScope=package', () => {
 
   it('no directory-level edges (no moduleGraph) yields evaluated=false with a non-empty reason', async () => {
     // e.g. a Go scope — no tsAnalysis.moduleGraph at all.
-    loadEngineMock.mockResolvedValue(
-      wrapArchJson(makeArchJsonWithModuleGraph(undefined, 'go'))
-    );
+    loadEngineMock.mockResolvedValue(wrapArchJson(makeArchJsonWithModuleGraph(undefined, 'go')));
 
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const cb = collectTools(server).get('archguard_detect_cycles');
@@ -1450,7 +1438,7 @@ describe('archguard_summary — packageGraph capability declaration', () => {
     // default mock is a TypeScript scope with no goAtlas extension
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const cb = collectTools(server).get('archguard_summary');
-    const parsed = JSON.parse((await cb!({})).content[0].text) as {
+    const parsed = JSON.parse((await cb({})).content[0].text) as {
       capabilities: {
         packageGraph: boolean;
         packageGraphKind: string;
@@ -1470,7 +1458,7 @@ describe('archguard_summary — packageGraph capability declaration', () => {
     loadEngineMock.mockResolvedValueOnce(wrapEngine(createGoAtlasEngine()));
     const server = new McpServer({ name: 'test', version: '1.0.0' });
     const cb = collectTools(server).get('archguard_summary');
-    const parsed = JSON.parse((await cb!({})).content[0].text) as {
+    const parsed = JSON.parse((await cb({})).content[0].text) as {
       capabilities: {
         packageGraph: boolean;
         packageGraphKind: string;
@@ -1486,8 +1474,7 @@ describe('archguard_summary — packageGraph capability declaration', () => {
 
 /** Collect the atlas analytics tools (fan-in/fan-out/god-packages) as name → handler. */
 async function collectAtlasTools(): Promise<Map<string, Function>> {
-  const { registerAtlasAnalyticsTools } =
-    await import('@/cli/mcp/tools/atlas-analytics-tools.js');
+  const { registerAtlasAnalyticsTools } = await import('@/cli/mcp/tools/atlas-analytics-tools.js');
   const server = new McpServer({ name: 'test', version: '1.0.0' });
   const tools = new Map<string, Function>();
   const originalTool = server.tool.bind(server);
@@ -1504,7 +1491,7 @@ describe('archguard_get_package_fanin — Go-Atlas-only boundary', () => {
     // default mock is a TypeScript scope with hasAtlasExtension: false
     const tools = await collectAtlasTools();
     const cb = tools.get('archguard_get_package_fanin');
-    const parsed = JSON.parse((await cb!({})).content[0].text) as {
+    const parsed = JSON.parse((await cb({})).content[0].text) as {
       applicable: boolean;
       reason: string;
       alternative: string;

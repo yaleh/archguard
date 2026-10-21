@@ -69,7 +69,10 @@ export class ParseWorkerPool {
   private dispatched = 0;
   private readonly initData: ParseWorkerInitData;
 
-  constructor(private readonly poolSize: number, initData: ParseWorkerInitData) {
+  constructor(
+    private readonly poolSize: number,
+    initData: ParseWorkerInitData
+  ) {
     if (!Number.isInteger(poolSize) || poolSize < 1) {
       throw new Error('Parse worker pool size must be a positive integer');
     }
