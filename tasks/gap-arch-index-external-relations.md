@@ -46,14 +46,14 @@ quay scope `b4f87b21`：arch.json 13,630 条，arch-index 内部边 10,493 条�
 
 ## AC
 
-- [ ] 夹具覆盖三类目标：`class A extends ExternalBase`（外部）、`class B implements LocalInterface`（内部，对照）、以及指向 type alias 的 `implementation`；索引后 `externalRelationsByType` 含前两条/第三条中无法解析的边，且带正确的 `type` 与原始 `to` 字符串
-- [ ] 负对照：两端都可解析的内部关系只出现在 `relationsByType`，不出现在 `externalRelationsByType`
-- [ ] 邻接表不变：`dependencies` / `dependents` 不含外部目标；对同一 index 调 `getDependencies` / `getDependents`，修复前后结果完全一致
-- [ ] 向后兼容：读取不含新字段的旧 `arch-index.json` 不报错；`ARCH_INDEX_VERSION` 不变
-- [ ] 真实数据（claudecodeui 副本）：重新构建 `93e0a992` 后，`VoiceFrameProcessor → ProcessorBase`（inheritance）与 `ShellMobileSelectionCore → MobileTerminalSelectionManager`（implementation）出现在 `externalRelationsByType`；丢弃总数与 arch.json 差额一致（inheritance 1 / implementation 1）
-- [ ] 真实数据（quay 副本）：dependency 2,489 / composition 644 / inheritance 4 / call 0 的差额被 `externalRelationsByType` 完整解释（逐类型计数相等）
-- [ ] 明确边界：不提取 `export type` 别名实体、不改变 `Entity` 模型；本任务只保留未解析的边
-- [ ] `bash scripts/test.sh --for-task gap-arch-index-external-relations` 与 `npm run type-check` 通过
+- [x] 夹具覆盖三类目标：`class A extends ExternalBase`（外部）、`class B implements LocalInterface`（内部，对照）、以及指向 type alias 的 `implementation`；索引后 `externalRelationsByType` 含前两条/第三条中无法解析的边，且带正确的 `type` 与原始 `to` 字符串
+- [x] 负对照：两端都可解析的内部关系只出现在 `relationsByType`，不出现在 `externalRelationsByType`
+- [x] 邻接表不变：`dependencies` / `dependents` 不含外部目标；对同一 index 调 `getDependencies` / `getDependents`，修复前后结果完全一致
+- [x] 向后兼容：读取不含新字段的旧 `arch-index.json` 不报错；`ARCH_INDEX_VERSION` 不变
+- [x] 真实数据（claudecodeui 副本）：重新构建 `93e0a992` 后，`VoiceFrameProcessor → ProcessorBase`（inheritance）与 `ShellMobileSelectionCore → MobileTerminalSelectionManager`（implementation）出现在 `externalRelationsByType`；丢弃总数与 arch.json 差额一致（inheritance 1 / implementation 1）
+- [x] 真实数据（quay 副本）：dependency 2,489 / composition 644 / inheritance 4 / call 0 的差额被 `externalRelationsByType` 完整解释（逐类型计数相等）
+- [x] 明确边界：不提取 `export type` 别名实体、不改变 `Entity` 模型；本任务只保留未解析的边
+- [x] `bash scripts/test.sh --for-task gap-arch-index-external-relations` 与 `npm run type-check` 通过
 
 ## DoD
 
