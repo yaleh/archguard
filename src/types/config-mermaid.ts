@@ -12,4 +12,10 @@ export const defaultMermaidConfig: MermaidConfig = {
   transparentBackground: false,
 };
 
-export type OutputFormat = 'mermaid' | 'json';
+/**
+ * Diagram output formats.
+ *
+ * `plantuml` is emit-only: ArchGuard writes deterministic `.puml` source and
+ * performs no rendering (there is no PlantUML renderer in v2).
+ */
+export type OutputFormat = 'mermaid' | 'json' | 'plantuml';

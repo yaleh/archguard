@@ -73,7 +73,7 @@ describe('Render Stage Separation', () => {
     outputDir: './archguard',
     baseName,
     paths: {
-      mmd: `./archguard/${baseName}.mmd`,
+      source: `./archguard/${baseName}.mmd`,
       svg: `./archguard/${baseName}.svg`,
       png: `./archguard/${baseName}.png`,
     },
@@ -132,7 +132,8 @@ describe('Render Stage Separation', () => {
       expect(renderJobs).toHaveLength(1);
       expect(renderJobs[0]).toEqual({
         name: 'test-diagram',
-        mermaidCode: mockMermaidCode,
+        diagramCode: mockMermaidCode,
+        format: 'mermaid',
         outputPath: outputOptions.paths,
       });
     });
@@ -193,8 +194,8 @@ describe('Render Stage Separation', () => {
       expect(jobs2).toHaveLength(1);
       expect(jobs1[0].name).toBe('diagram1');
       expect(jobs2[0].name).toBe('diagram2');
-      expect(jobs1[0].outputPath.mmd).toContain('diagram1.mmd');
-      expect(jobs2[0].outputPath.mmd).toContain('diagram2.mmd');
+      expect(jobs1[0].outputPath.source).toContain('diagram1.mmd');
+      expect(jobs2[0].outputPath.source).toContain('diagram2.mmd');
     });
 
     it('should include validation in generation stage', async () => {
@@ -258,27 +259,30 @@ describe('Render Stage Separation', () => {
       const renderJobs: RenderJob[] = [
         {
           name: 'diagram1',
-          mermaidCode: 'classDiagram\n  class TestClass1\n',
+          diagramCode: 'classDiagram\n  class TestClass1\n',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/diagram1.mmd',
+            source: './archguard/diagram1.mmd',
             svg: './archguard/diagram1.svg',
             png: './archguard/diagram1.png',
           },
         },
         {
           name: 'diagram2',
-          mermaidCode: 'classDiagram\n  class TestClass2\n',
+          diagramCode: 'classDiagram\n  class TestClass2\n',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/diagram2.mmd',
+            source: './archguard/diagram2.mmd',
             svg: './archguard/diagram2.svg',
             png: './archguard/diagram2.png',
           },
         },
         {
           name: 'diagram3',
-          mermaidCode: 'classDiagram\n  class TestClass3\n',
+          diagramCode: 'classDiagram\n  class TestClass3\n',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/diagram3.mmd',
+            source: './archguard/diagram3.mmd',
             svg: './archguard/diagram3.svg',
             png: './archguard/diagram3.png',
           },
@@ -296,17 +300,22 @@ describe('Render Stage Separation', () => {
 
       // Verify all jobs were rendered
       expect(mockRenderAndSave).toHaveBeenCalledTimes(3);
+      const toMermaidPaths = (job: RenderJob) => ({
+        mmd: job.outputPath.source,
+        svg: job.outputPath.svg,
+        png: job.outputPath.png,
+      });
       expect(mockRenderAndSave).toHaveBeenCalledWith(
-        renderJobs[0].mermaidCode,
-        renderJobs[0].outputPath
+        renderJobs[0].diagramCode,
+        toMermaidPaths(renderJobs[0])
       );
       expect(mockRenderAndSave).toHaveBeenCalledWith(
-        renderJobs[1].mermaidCode,
-        renderJobs[1].outputPath
+        renderJobs[1].diagramCode,
+        toMermaidPaths(renderJobs[1])
       );
       expect(mockRenderAndSave).toHaveBeenCalledWith(
-        renderJobs[2].mermaidCode,
-        renderJobs[2].outputPath
+        renderJobs[2].diagramCode,
+        toMermaidPaths(renderJobs[2])
       );
     });
 
@@ -314,36 +323,40 @@ describe('Render Stage Separation', () => {
       const renderJobs: RenderJob[] = [
         {
           name: 'diagram1',
-          mermaidCode: 'classDiagram\n  class TestClass1\n',
+          diagramCode: 'classDiagram\n  class TestClass1\n',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/diagram1.mmd',
+            source: './archguard/diagram1.mmd',
             svg: './archguard/diagram1.svg',
             png: './archguard/diagram1.png',
           },
         },
         {
           name: 'diagram2',
-          mermaidCode: 'classDiagram\n  class TestClass2\n',
+          diagramCode: 'classDiagram\n  class TestClass2\n',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/diagram2.mmd',
+            source: './archguard/diagram2.mmd',
             svg: './archguard/diagram2.svg',
             png: './archguard/diagram2.png',
           },
         },
         {
           name: 'diagram3',
-          mermaidCode: 'classDiagram\n  class TestClass3\n',
+          diagramCode: 'classDiagram\n  class TestClass3\n',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/diagram3.mmd',
+            source: './archguard/diagram3.mmd',
             svg: './archguard/diagram3.svg',
             png: './archguard/diagram3.png',
           },
         },
         {
           name: 'diagram4',
-          mermaidCode: 'classDiagram\n  class TestClass4\n',
+          diagramCode: 'classDiagram\n  class TestClass4\n',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/diagram4.mmd',
+            source: './archguard/diagram4.mmd',
             svg: './archguard/diagram4.svg',
             png: './archguard/diagram4.png',
           },
@@ -377,27 +390,30 @@ describe('Render Stage Separation', () => {
       const renderJobs: RenderJob[] = [
         {
           name: 'diagram1',
-          mermaidCode: 'classDiagram\n  class TestClass1\n',
+          diagramCode: 'classDiagram\n  class TestClass1\n',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/diagram1.mmd',
+            source: './archguard/diagram1.mmd',
             svg: './archguard/diagram1.svg',
             png: './archguard/diagram1.png',
           },
         },
         {
           name: 'diagram2',
-          mermaidCode: 'classDiagram\n  class TestClass2\n',
+          diagramCode: 'classDiagram\n  class TestClass2\n',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/diagram2.mmd',
+            source: './archguard/diagram2.mmd',
             svg: './archguard/diagram2.svg',
             png: './archguard/diagram2.png',
           },
         },
         {
           name: 'diagram3',
-          mermaidCode: 'classDiagram\n  class TestClass3\n',
+          diagramCode: 'classDiagram\n  class TestClass3\n',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/diagram3.mmd',
+            source: './archguard/diagram3.mmd',
             svg: './archguard/diagram3.svg',
             png: './archguard/diagram3.png',
           },
@@ -484,7 +500,7 @@ describe('Render Stage Separation', () => {
 
       // Verify stage 1 completed
       expect(allRenderJobs).toHaveLength(2);
-      expect(allRenderJobs.every((job) => job.mermaidCode)).toBe(true);
+      expect(allRenderJobs.every((job) => job.diagramCode)).toBe(true);
 
       // Stage 2: Render all jobs in parallel
       await MermaidDiagramGenerator.renderJobsInParallel(allRenderJobs, 4);

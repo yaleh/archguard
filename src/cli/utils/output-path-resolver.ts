@@ -26,6 +26,8 @@ export interface PathResolution {
   paths: {
     /** Path to .mmd file (Mermaid source) */
     mmd: string;
+    /** Path to .puml file (PlantUML source; emit-only format) */
+    puml: string;
     /** Path to .png file */
     png: string;
     /** Path to .svg file */
@@ -137,6 +139,7 @@ export class OutputPathResolver {
       baseName,
       paths: {
         mmd: path.join(outputDir, `${baseName}.mmd`),
+        puml: path.join(outputDir, `${baseName}.puml`),
         png: path.join(outputDir, `${baseName}.png`),
         svg: path.join(outputDir, `${baseName}.svg`),
         json: path.join(outputDir, `${baseName}.json`),

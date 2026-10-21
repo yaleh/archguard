@@ -34,9 +34,10 @@ vi.mock('@/mermaid/diagram-generator.js', () => ({
     generateOnly: vi.fn().mockResolvedValue([
       {
         name: 'test',
-        mermaidCode: 'classDiagram\n  class Foo',
+        diagramCode: 'classDiagram\n  class Foo',
+        format: 'mermaid',
         outputPath: {
-          mmd: '/out/diagram.mmd',
+          source: '/out/diagram.mmd',
           svg: '/out/diagram.svg',
           png: '/out/diagram.png',
         },

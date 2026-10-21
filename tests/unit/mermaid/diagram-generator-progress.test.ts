@@ -98,7 +98,7 @@ describe('MermaidDiagramGenerator - progress injection', () => {
           {
             outputDir: '/tmp',
             baseName: 'test',
-            paths: { mmd: '/tmp/test.mmd', svg: '/tmp/test.svg', png: '/tmp/test.png' },
+            paths: { source: '/tmp/test.mmd', svg: '/tmp/test.svg', png: '/tmp/test.png' },
           },
           'class'
         );
@@ -119,7 +119,7 @@ describe('MermaidDiagramGenerator - progress injection', () => {
           {
             outputDir: '/tmp',
             baseName: 'test',
-            paths: { mmd: '/tmp/test.mmd', svg: '/tmp/test.svg', png: '/tmp/test.png' },
+            paths: { source: '/tmp/test.mmd', svg: '/tmp/test.svg', png: '/tmp/test.png' },
           },
           'class'
         );

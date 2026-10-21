@@ -156,9 +156,10 @@ describe('DiagramProcessor.parallel', () => {
       const mockGenerateOnly = vi.fn().mockResolvedValue([
         {
           name: 'test',
-          mermaidCode: 'classDiagram\n  class TestClass',
+          diagramCode: 'classDiagram\n  class TestClass',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/test.mmd',
+            source: './archguard/test.mmd',
             png: './archguard/test.png',
             svg: './archguard/test.svg',
           },
@@ -247,9 +248,10 @@ describe('DiagramProcessor.parallel', () => {
       const mockGenerateOnly = vi.fn().mockResolvedValue([
         {
           name: 'test',
-          mermaidCode: 'classDiagram\n  class TestClass',
+          diagramCode: 'classDiagram\n  class TestClass',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/test.mmd',
+            source: './archguard/test.mmd',
             png: './archguard/test.png',
             svg: './archguard/test.svg',
           },
@@ -344,9 +346,10 @@ describe('DiagramProcessor.parallel', () => {
       const mockGenerateOnly = vi.fn().mockResolvedValue([
         {
           name: 'test',
-          mermaidCode: 'classDiagram\n  class TestClass',
+          diagramCode: 'classDiagram\n  class TestClass',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/test.mmd',
+            source: './archguard/test.mmd',
             png: './archguard/test.png',
             svg: './archguard/test.svg',
           },
@@ -423,9 +426,10 @@ describe('DiagramProcessor.parallel', () => {
       const mockGenerateOnly = vi.fn().mockResolvedValue([
         {
           name: 'test',
-          mermaidCode: 'classDiagram\n  class TestClass',
+          diagramCode: 'classDiagram\n  class TestClass',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/test.mmd',
+            source: './archguard/test.mmd',
             png: './archguard/test.png',
             svg: './archguard/test.svg',
           },
@@ -516,9 +520,10 @@ describe('DiagramProcessor.parallel', () => {
       const mockGenerateOnly = vi.fn().mockResolvedValue([
         {
           name: 'test',
-          mermaidCode: 'classDiagram\n  class TestClass',
+          diagramCode: 'classDiagram\n  class TestClass',
+          format: 'mermaid',
           outputPath: {
-            mmd: './archguard/test.mmd',
+            source: './archguard/test.mmd',
             png: './archguard/test.png',
             svg: './archguard/test.svg',
           },

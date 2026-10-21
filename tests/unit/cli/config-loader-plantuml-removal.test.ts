@@ -1,21 +1,26 @@
 /**
- * Phase 3: PlantUML Removal Tests
- * TDD: Tests to verify PlantUML format is rejected from configuration
+ * Config schema: PlantUML is an EMIT-ONLY output format.
+ *
+ * History: v2.1 removed PlantUML entirely (this file used to assert that
+ * `format: 'plantuml'` was rejected). gap-plantuml-deterministic-generation
+ * reintroduced it as a deterministic `.puml` emitter, so the assertions are
+ * inverted: `plantuml` is accepted everywhere a format is accepted, while
+ * rendering-only formats such as `svg` remain rejected.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ConfigLoader } from '@/cli/config-loader';
+import type { OutputFormat } from '@/types/config';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 
-describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
+describe('PlantUML as an emit-only configuration format', () => {
   let loader: ConfigLoader;
-  const testDir = path.join(os.tmpdir(), '.archguard-plantuml-removal-test');
+  const testDir = path.join(os.tmpdir(), '.archguard-plantuml-emit-only-test');
 
   beforeEach(async () => {
     loader = new ConfigLoader(testDir);
-    // Clean up before each test
     if (await fs.pathExists(testDir)) {
       await fs.remove(testDir);
     }
@@ -23,46 +28,24 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
   });
 
   afterEach(async () => {
-    // Clean up after each test
     if (await fs.pathExists(testDir)) {
       await fs.remove(testDir);
     }
   });
 
-  describe('Config Schema Validation - Format Rejection', () => {
-    it('should reject "plantuml" format in global config', async () => {
+  describe('Config Schema Validation - PlantUML acceptance', () => {
+    it('accepts "plantuml" format in global config', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        diagrams: [
-          {
-            name: 'overview',
-            sources: ['./src'],
-            level: 'class',
-          },
-        ],
+        diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
         format: 'plantuml',
       });
 
-      await expect(loader.load()).rejects.toThrow(/Invalid enum value|Invalid option|plantuml/);
+      const config = await loader.load();
+      expect(config.format).toBe('plantuml');
     });
 
-    it('should reject "svg" format in global config', async () => {
-      const configPath = path.join(testDir, 'archguard.config.json');
-      await fs.writeJson(configPath, {
-        diagrams: [
-          {
-            name: 'overview',
-            sources: ['./src'],
-            level: 'class',
-          },
-        ],
-        format: 'svg',
-      });
-
-      await expect(loader.load()).rejects.toThrow(/Invalid enum value|Invalid option|svg/);
-    });
-
-    it('should reject "plantuml" format in diagram config', async () => {
+    it('accepts "plantuml" format in diagram config', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [
@@ -75,10 +58,48 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
         ],
       });
 
-      await expect(loader.load()).rejects.toThrow(/Invalid enum value|Invalid option|plantuml/);
+      const config = await loader.load();
+      expect(config.diagrams[0]?.format).toBe('plantuml');
     });
 
-    it('should reject "svg" format in diagram config', async () => {
+    it('accepts "plantuml" format via CLI override', async () => {
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, {
+        diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
+        format: 'json',
+      });
+
+      const config = await loader.load({ format: 'plantuml' });
+      expect(config.format).toBe('plantuml');
+    });
+
+    it('does not enable a renderer for the emit-only plantuml format', async () => {
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, {
+        diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
+        format: 'plantuml',
+      });
+
+      const config = await loader.load();
+      // Emit-only: format is plantuml, but the mermaid renderer settings stay at
+      // their defaults and are never consulted by the plantuml output path.
+      expect(config.format).toBe('plantuml');
+      expect(config.mermaid.renderer).toBe('isomorphic');
+    });
+  });
+
+  describe('Config Schema Validation - still rejects rendering-only formats', () => {
+    it('rejects "svg" format in global config', async () => {
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, {
+        diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
+        format: 'svg',
+      });
+
+      await expect(loader.load()).rejects.toThrow(/Invalid enum value|Invalid option|svg/);
+    });
+
+    it('rejects "svg" format in diagram config', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
         diagrams: [
@@ -94,16 +115,23 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
       await expect(loader.load()).rejects.toThrow(/Invalid enum value|Invalid option|svg/);
     });
 
-    it('should accept "mermaid" format', async () => {
+    it('rejects "svg" format via CLI override', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        diagrams: [
-          {
-            name: 'overview',
-            sources: ['./src'],
-            level: 'class',
-          },
-        ],
+        diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
+      });
+
+      await expect(loader.load({ format: 'svg' as unknown as OutputFormat })).rejects.toThrow(
+        /Invalid enum value|Invalid option|svg/
+      );
+    });
+  });
+
+  describe('Existing formats keep working', () => {
+    it('accepts "mermaid" format', async () => {
+      const configPath = path.join(testDir, 'archguard.config.json');
+      await fs.writeJson(configPath, {
+        diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
         format: 'mermaid',
       });
 
@@ -111,16 +139,10 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
       expect(config.format).toBe('mermaid');
     });
 
-    it('should accept "json" format', async () => {
+    it('accepts "json" format', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        diagrams: [
-          {
-            name: 'overview',
-            sources: ['./src'],
-            level: 'class',
-          },
-        ],
+        diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
         format: 'json',
       });
 
@@ -128,16 +150,10 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
       expect(config.format).toBe('json');
     });
 
-    it('should default to "mermaid" format when not specified', async () => {
+    it('defaults to "mermaid" format when not specified', async () => {
       const configPath = path.join(testDir, 'archguard.config.json');
       await fs.writeJson(configPath, {
-        diagrams: [
-          {
-            name: 'overview',
-            sources: ['./src'],
-            level: 'class',
-          },
-        ],
+        diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
       });
 
       const config = await loader.load();
@@ -145,74 +161,14 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
     });
   });
 
-  describe('CLI Options Format Validation', () => {
-    it('should reject "plantuml" format via CLI override', async () => {
-      const configPath = path.join(testDir, 'archguard.config.json');
-      await fs.writeJson(configPath, {
-        diagrams: [
-          {
-            name: 'overview',
-            sources: ['./src'],
-            level: 'class',
-          },
-        ],
-      });
-
-      await expect(loader.load({ format: 'plantuml' as any })).rejects.toThrow(
-        /Invalid enum value|Invalid option|plantuml/
-      );
-    });
-
-    it('should reject "svg" format via CLI override', async () => {
-      const configPath = path.join(testDir, 'archguard.config.json');
-      await fs.writeJson(configPath, {
-        diagrams: [
-          {
-            name: 'overview',
-            sources: ['./src'],
-            level: 'class',
-          },
-        ],
-      });
-
-      await expect(loader.load({ format: 'svg' as any })).rejects.toThrow(
-        /Invalid enum value|Invalid option|svg/
-      );
-    });
-
-    it('should accept "mermaid" format via CLI override', async () => {
-      const configPath = path.join(testDir, 'archguard.config.json');
-      await fs.writeJson(configPath, {
-        diagrams: [
-          {
-            name: 'overview',
-            sources: ['./src'],
-            level: 'class',
-          },
-        ],
-        format: 'json',
-      });
-
-      const config = await loader.load({ format: 'mermaid' });
-      expect(config.format).toBe('mermaid');
-    });
-  });
-
   describe('TypeScript Type System', () => {
-    it('should only allow "mermaid" and "json" as valid format types', async () => {
-      // This test verifies the type system at runtime
-      const validFormats: Array<'mermaid' | 'json'> = ['mermaid', 'json'];
+    it('allows "mermaid", "json" and emit-only "plantuml" as valid format types', async () => {
+      const validFormats: OutputFormat[] = ['mermaid', 'json', 'plantuml'];
 
       for (const format of validFormats) {
         const configPath = path.join(testDir, 'archguard.config.json');
         await fs.writeJson(configPath, {
-          diagrams: [
-            {
-              name: 'overview',
-              sources: ['./src'],
-              level: 'class',
-            },
-          ],
+          diagrams: [{ name: 'overview', sources: ['./src'], level: 'class' }],
           format,
         });
 
@@ -221,56 +177,6 @@ describe('Phase 3: PlantUML Removal from Configuration Schema', () => {
 
         await fs.remove(configPath);
       }
-    });
-  });
-
-  describe('Error Messages', () => {
-    it('should provide helpful error message for PlantUML format', async () => {
-      const configPath = path.join(testDir, 'archguard.config.json');
-      await fs.writeJson(configPath, {
-        diagrams: [
-          {
-            name: 'overview',
-            sources: ['./src'],
-            level: 'class',
-          },
-        ],
-        format: 'plantuml',
-      });
-
-      await expect(loader.load()).rejects.toThrow(/mermaid|json/);
-    });
-
-    it('should provide helpful error message for SVG format', async () => {
-      const configPath = path.join(testDir, 'archguard.config.json');
-      await fs.writeJson(configPath, {
-        diagrams: [
-          {
-            name: 'overview',
-            sources: ['./src'],
-            level: 'class',
-          },
-        ],
-        format: 'svg',
-      });
-
-      await expect(loader.load()).rejects.toThrow(/mermaid|json/);
-    });
-
-    it('should indicate validation error', async () => {
-      const configPath = path.join(testDir, 'archguard.config.json');
-      await fs.writeJson(configPath, {
-        diagrams: [
-          {
-            name: 'overview',
-            sources: ['./src'],
-            level: 'class',
-          },
-        ],
-        format: 'plantuml',
-      });
-
-      await expect(loader.load()).rejects.toThrow(/Configuration validation failed/);
     });
   });
 });

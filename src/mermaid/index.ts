@@ -32,4 +32,4 @@ export { isExternalDependency, EXTERNAL_DEPENDENCIES } from './external-dependen
 
 // Main Diagram Generator
 export { MermaidDiagramGenerator } from './diagram-generator.js';
-export type { MermaidOutputOptions } from './diagram-generator.js';
+export type { DiagramFormat, DiagramOutputOptions } from './diagram-generator.js';

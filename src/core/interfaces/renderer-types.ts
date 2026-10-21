@@ -1,25 +1,39 @@
 /**
- * Renderer-facing types shared between the core interface layer and the mermaid
- * implementation layer.
+ * Renderer-facing types shared between the core interface layer and the
+ * language/format implementation layer.
  *
  * These describe the *contract* between a renderer facade and its callers, so
- * they belong in the core interface layer (below mermaid). `renderer-facade.ts`
- * and `src/mermaid/diagram-generator.ts` both re-export them, so existing import
- * paths on either side keep working (layer guard:
+ * they belong in the core interface layer (below the concrete generators).
+ * `renderer-facade.ts` and `src/mermaid/diagram-generator.ts` both re-export
+ * them, so existing import paths on either side keep working (layer guard:
  * tests/unit/architecture/layer-imports.test.ts — core must not import mermaid).
+ *
+ * Task gap-plantuml-deterministic-generation removed the Mermaid-specific
+ * vocabulary from this contract: a render job now carries a format-neutral
+ * `diagramCode` plus the `format` that produced it, and its source file is
+ * `outputPath.source` (`.mmd` for Mermaid, `.puml` for PlantUML).
  */
 
 /**
- * Output options for Mermaid diagram generation
+ * Supported diagram source formats.
  */
-export interface MermaidOutputOptions {
+export type DiagramFormat = 'mermaid' | 'plantuml';
+
+/**
+ * Output options for diagram generation.
+ */
+export interface DiagramOutputOptions {
   /** Output directory for generated files */
   outputDir: string;
   /** Base name for output files (without extension) */
   baseName: string;
   /** Full paths to output files */
   paths: {
-    mmd: string;
+    /**
+     * Diagram source path: `.mmd` for Mermaid, `.puml` for PlantUML.
+     * Named `source` rather than after one format's extension.
+     */
+    source: string;
     svg: string;
     png: string;
   };
@@ -34,11 +48,14 @@ export interface MermaidOutputOptions {
 export interface RenderJob {
   /** Diagram name */
   name: string;
-  /** Generated Mermaid code */
-  mermaidCode: string;
+  /** Generated diagram source code in `format` */
+  diagramCode: string;
+  /** Format that produced `diagramCode` */
+  format: DiagramFormat;
   /** Output file paths */
   outputPath: {
-    mmd: string;
+    /** Diagram source path (`.mmd` or `.puml`) */
+    source: string;
     svg: string;
     png: string;
   };

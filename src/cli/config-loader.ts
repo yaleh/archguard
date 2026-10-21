@@ -22,6 +22,10 @@ export type { ArchGuardConfig } from '../types/config.js';
  * - Changed default format from 'plantuml' to 'mermaid'
  * - Added mermaid-specific configuration
  * - Removed plantuml and svg formats (only 'mermaid' and 'json' supported)
+ *
+ * v3 (gap-plantuml-deterministic-generation):
+ * - 'plantuml' is accepted again, as an EMIT-ONLY format: it writes .puml
+ *   source and performs no rendering.
  */
 
 // Mermaid configuration schema
@@ -142,7 +146,7 @@ const configSchema = z.object({
   // ========== Global Configuration ==========
   workDir: z.string().default('./.archguard'),
   outputDir: z.string().default('./.archguard/output'),
-  format: z.enum(['mermaid', 'json']).default('mermaid'),
+  format: z.enum(['mermaid', 'json', 'plantuml']).default('mermaid'),
   mermaid: MermaidConfigSchema.default({
     renderer: 'isomorphic',
     theme: 'default',
@@ -252,7 +256,7 @@ const configSchema = z.object({
         /** Human-readable description */
         description: z.string().optional(),
         /** Output format override */
-        format: z.enum(['mermaid', 'json']).optional(),
+        format: z.enum(['mermaid', 'json', 'plantuml']).optional(),
         /** Exclude patterns override */
         exclude: z.array(z.string()).optional(),
         /** Language plugin: typescript | cpp | python | go | java | kotlin */
@@ -284,7 +288,7 @@ export type Config = z.infer<typeof configSchema>;
 interface FileConfig {
   workDir?: string;
   outputDir?: string;
-  format?: 'mermaid' | 'json';
+  format?: 'mermaid' | 'json' | 'plantuml';
   mermaid?: {
     renderer?: 'isomorphic' | 'cli';
     theme?: 'default' | 'forest' | 'dark' | 'neutral';
@@ -316,7 +320,7 @@ interface FileConfig {
     sources: string[];
     level: 'package' | 'class' | 'method';
     description?: string;
-    format?: 'mermaid' | 'json';
+    format?: 'mermaid' | 'json' | 'plantuml';
     exclude?: string[];
     language?: string;
     languageSpecific?: Record<string, unknown>;

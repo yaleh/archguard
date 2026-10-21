@@ -70,7 +70,7 @@ describe('MermaidDiagramGenerator E2E', () => {
         outputDir: testOutputDir,
         baseName: 'test-diagram',
         paths: {
-          mmd: path.join(testOutputDir, 'test-diagram.mmd'),
+          source: path.join(testOutputDir, 'test-diagram.mmd'),
           svg: path.join(testOutputDir, 'test-diagram.svg'),
           png: path.join(testOutputDir, 'test-diagram.png'),
         },
@@ -158,7 +158,7 @@ describe('MermaidDiagramGenerator E2E', () => {
         outputDir: testOutputDir,
         baseName: 'problematic',
         paths: {
-          mmd: path.join(testOutputDir, 'problematic.mmd'),
+          source: path.join(testOutputDir, 'problematic.mmd'),
           svg: path.join(testOutputDir, 'problematic.svg'),
           png: path.join(testOutputDir, 'problematic.png'),
         },
@@ -168,7 +168,7 @@ describe('MermaidDiagramGenerator E2E', () => {
 
     // Verify mermaid code was generated despite problematic input
     expect(jobs.length).toBeGreaterThan(0);
-    expect(jobs[0].mermaidCode).toContain('classDiagram');
+    expect(jobs[0].diagramCode).toContain('classDiagram');
   });
 
   it('should support package-level diagrams', async () => {
@@ -186,7 +186,7 @@ describe('MermaidDiagramGenerator E2E', () => {
         outputDir: testOutputDir,
         baseName: 'package-level',
         paths: {
-          mmd: path.join(testOutputDir, 'package-level.mmd'),
+          source: path.join(testOutputDir, 'package-level.mmd'),
           svg: path.join(testOutputDir, 'package-level.svg'),
           png: path.join(testOutputDir, 'package-level.png'),
         },
@@ -195,7 +195,7 @@ describe('MermaidDiagramGenerator E2E', () => {
     );
 
     expect(jobs.length).toBeGreaterThan(0);
-    const mmdContent = jobs[0].mermaidCode;
+    const mmdContent = jobs[0].diagramCode;
     expect(mmdContent).toContain('classDiagram');
     // Package level should have namespaces
     expect(mmdContent).toMatch(/namespace|class/);
@@ -216,7 +216,7 @@ describe('MermaidDiagramGenerator E2E', () => {
         outputDir: testOutputDir,
         baseName: 'method-level',
         paths: {
-          mmd: path.join(testOutputDir, 'method-level.mmd'),
+          source: path.join(testOutputDir, 'method-level.mmd'),
           svg: path.join(testOutputDir, 'method-level.svg'),
           png: path.join(testOutputDir, 'method-level.png'),
         },
@@ -225,7 +225,7 @@ describe('MermaidDiagramGenerator E2E', () => {
     );
 
     expect(jobs.length).toBeGreaterThan(0);
-    const mmdContent = jobs[0].mermaidCode;
+    const mmdContent = jobs[0].diagramCode;
     expect(mmdContent).toContain('classDiagram');
     expect(mmdContent).toContain('('); // Should have method parameters
   });
@@ -253,7 +253,7 @@ describe('MermaidDiagramGenerator E2E', () => {
           outputDir: testOutputDir,
           baseName: 'empty',
           paths: {
-            mmd: path.join(testOutputDir, 'empty.mmd'),
+            source: path.join(testOutputDir, 'empty.mmd'),
             svg: path.join(testOutputDir, 'empty.svg'),
             png: path.join(testOutputDir, 'empty.png'),
           },
@@ -300,7 +300,7 @@ describe('MermaidDiagramGenerator E2E', () => {
           outputDir: testOutputDir,
           baseName: 'large',
           paths: {
-            mmd: path.join(testOutputDir, 'large.mmd'),
+            source: path.join(testOutputDir, 'large.mmd'),
             svg: path.join(testOutputDir, 'large.svg'),
             png: path.join(testOutputDir, 'large.png'),
           },
@@ -367,7 +367,7 @@ describe('MermaidDiagramGenerator E2E', () => {
         outputDir: testOutputDir,
         baseName: 'relations',
         paths: {
-          mmd: path.join(testOutputDir, 'relations.mmd'),
+          source: path.join(testOutputDir, 'relations.mmd'),
           svg: path.join(testOutputDir, 'relations.svg'),
           png: path.join(testOutputDir, 'relations.png'),
         },
@@ -376,7 +376,7 @@ describe('MermaidDiagramGenerator E2E', () => {
     );
 
     expect(jobs.length).toBeGreaterThan(0);
-    const mmdContent = jobs[0].mermaidCode;
+    const mmdContent = jobs[0].diagramCode;
 
     // Check for relationship markers
     expect(mmdContent).toContain('<|--'); // Inheritance
@@ -448,7 +448,7 @@ describe('MermaidDiagramGenerator E2E', () => {
         outputDir: testOutputDir,
         baseName: 'contract',
         paths: {
-          mmd: path.join(testOutputDir, 'contract.mmd'),
+          source: path.join(testOutputDir, 'contract.mmd'),
           svg: path.join(testOutputDir, 'contract.svg'),
           png: path.join(testOutputDir, 'contract.png'),
         },
@@ -457,7 +457,7 @@ describe('MermaidDiagramGenerator E2E', () => {
     );
 
     expect(jobs.length).toBeGreaterThan(0);
-    const mmdContent = jobs[0].mermaidCode;
+    const mmdContent = jobs[0].diagramCode;
 
     // Header contract: classDiagram must be the first line (generator.ts:291)
     expect(mmdContent).toMatch(/^classDiagram/);

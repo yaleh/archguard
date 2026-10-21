@@ -99,9 +99,7 @@ export class DiagramPipelineRunner {
       // metrics and metricVector describing one and the same graph instead of
       // patching relations in after the fact.
       const levelJSON =
-        diagram.level === 'package'
-          ? buildTsPackageGraphArchJson(aggregatedJSON)
-          : aggregatedJSON;
+        diagram.level === 'package' ? buildTsPackageGraphArchJson(aggregatedJSON) : aggregatedJSON;
 
       // 2. Resolve output paths
       if (progress) {
@@ -216,6 +214,9 @@ export class DiagramPipelineRunner {
         resultPaths.mmd = paths.paths.mmd;
         resultPaths.svg = paths.paths.svg;
         resultPaths.png = paths.paths.png;
+      } else if (format === 'plantuml') {
+        // Emit-only: the .puml source is the sole artifact.
+        resultPaths.puml = paths.paths.puml;
       }
 
       // For package-level TS diagrams the rendered output comes from the

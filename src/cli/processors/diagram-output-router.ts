@@ -12,6 +12,8 @@
 import { MermaidDiagramGenerator } from '@/mermaid/diagram-generator.js';
 import { MermaidRenderWorkerPool } from '@/mermaid/render-worker-pool.js';
 import { postProcessSVG } from '@/mermaid/post-process-svg.js';
+import { HeuristicGrouper } from '@/mermaid/grouper.js';
+import { PlantUmlGenerator, PlantUmlStructuralValidator } from '@/plantuml/index.js';
 import type { MermaidRendererOptions } from '@/mermaid/types.js';
 import { RenderHashCache } from '@/cli/cache/render-hash-cache.js';
 import type { RenderOptions } from '@/cli/cache/render-hash-cache.js';
@@ -31,6 +33,7 @@ export type OutputPaths = {
   paths: {
     json: string;
     mmd: string;
+    puml: string;
     png: string;
     svg: string;
   };
@@ -87,7 +90,9 @@ export function buildTsPackageGraphArchJson(archJSON: ArchJSON): ArchJSON {
     }));
 
   const relations: Relation[] = moduleGraph.edges
-    .filter((edge) => internalIds.has(edge.from) && internalIds.has(edge.to) && edge.from !== edge.to)
+    .filter(
+      (edge) => internalIds.has(edge.from) && internalIds.has(edge.to) && edge.from !== edge.to
+    )
     .map((edge) => ({
       // Keep the raw module ids in the id so existing id-parsing consumers keep
       // working for every non-root edge.
@@ -128,10 +133,11 @@ export class DiagramOutputRouter {
    *
    * Dispatch order:
    * 1. json format  → write JSON file directly
-   * 2. mermaid + goAtlas extension → generateAtlasOutput
-   * 3. mermaid + tsAnalysis.moduleGraph + level=package → generateTsModuleGraphOutput
-   * 4. mermaid + language=cpp + level=package → generateCppPackageOutput
-   * 5. mermaid (all other) → generateDefaultOutput (MermaidDiagramGenerator)
+   * 2. plantuml format → emit deterministic .puml (emit-only, no rendering)
+   * 3. mermaid + goAtlas extension → generateAtlasOutput
+   * 4. mermaid + tsAnalysis.moduleGraph + level=package → generateTsModuleGraphOutput
+   * 5. mermaid + language=cpp + level=package → generateCppPackageOutput
+   * 6. mermaid (all other) → generateDefaultOutput (MermaidDiagramGenerator)
    */
   async route(
     archJSON: ArchJSON,
@@ -150,6 +156,12 @@ export class DiagramOutputRouter {
       // languages / levels pass through unchanged.
       const outputJson = level === 'package' ? buildTsPackageGraphArchJson(archJSON) : archJSON;
       await fs.writeJson(paths.paths.json, canonicalizeArchJson(outputJson), { spaces: 2 });
+      return;
+    }
+
+    // Step 2: plantuml format — deterministic emit-only .puml output
+    if (format === 'plantuml') {
+      await this.generatePlantUmlOutput(archJSON, paths, level);
       return;
     }
 
@@ -243,6 +255,33 @@ export class DiagramOutputRouter {
   }
 
   /**
+   * Emit deterministic PlantUML source (`.puml`).
+   *
+   * This is an emit-only path: no SVG/PNG rendering and no render-cache
+   * sidecars. The generated source is structurally validated before it is
+   * written, so an emitter regression cannot land a dangling-reference
+   * diagram on disk.
+   */
+  private async generatePlantUmlOutput(
+    archJSON: ArchJSON,
+    paths: OutputPaths,
+    level: DetailLevel
+  ): Promise<void> {
+    const grouping = new HeuristicGrouper().group(archJSON);
+    const generator = new PlantUmlGenerator(archJSON, { level, grouping });
+    const puml = generator.generate();
+
+    const validation = new PlantUmlStructuralValidator().validate(puml);
+    if (!validation.valid) {
+      const details = validation.issues.map((issue) => `- ${issue.message}`).join('\n');
+      throw new Error(`PlantUML structural validation failed:\n${details}`);
+    }
+
+    await fs.ensureDir(path.dirname(paths.paths.puml));
+    await fs.writeFile(paths.paths.puml, puml, 'utf-8');
+  }
+
+  /**
    * Generate standard Mermaid class/method/package diagram output via MermaidDiagramGenerator.
    * Uses generateOnly + manual render so we can apply RenderHashCache per job.
    */
@@ -259,9 +298,13 @@ export class DiagramOutputRouter {
     const jobs = await mermaidGenerator.generateOnly(
       archJSON,
       {
-        outputDir: paths.paths.mmd.replace(/\/[^/]+$/, ''),
-        baseName: paths.paths.mmd.replace(/^.*\/([^/]+)\.mmd$/, '$1'),
-        paths: paths.paths,
+        outputDir: path.dirname(paths.paths.mmd),
+        baseName: path.basename(paths.paths.mmd, '.mmd'),
+        paths: {
+          source: paths.paths.mmd,
+          svg: paths.paths.svg,
+          png: paths.paths.png,
+        },
       },
       level,
       diagram
@@ -271,17 +314,17 @@ export class DiagramOutputRouter {
     const mermaidRenderer = new IsomorphicMermaidRenderer(this.buildRendererOptions());
 
     for (const job of jobs) {
-      await fs.ensureDir(path.dirname(job.outputPath.mmd));
-      await fs.writeFile(job.outputPath.mmd, job.mermaidCode, 'utf-8');
+      await fs.ensureDir(path.dirname(job.outputPath.source));
+      await fs.writeFile(job.outputPath.source, job.diagramCode, 'utf-8');
 
-      if (await this.renderCache.checkHit(job.outputPath.mmd, job.mermaidCode, renderOptions)) {
+      if (await this.renderCache.checkHit(job.outputPath.source, job.diagramCode, renderOptions)) {
         continue; // Cache hit — skip rendering
       }
 
       // Render SVG: use worker pool, fall back to main thread, then degrade to
       // a warning (keep .mmd) if the graph exceeds mermaid's render limits.
       const processedSvg = await this.renderSvgOrDegrade(
-        job.mermaidCode,
+        job.diagramCode,
         pool,
         job.name,
         mermaidRenderer
@@ -297,7 +340,7 @@ export class DiagramOutputRouter {
         ]);
       }
 
-      await this.renderCache.writeHash(job.outputPath.mmd, job.mermaidCode, renderOptions);
+      await this.renderCache.writeHash(job.outputPath.source, job.diagramCode, renderOptions);
     }
   }
 

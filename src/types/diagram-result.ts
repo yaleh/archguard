@@ -23,6 +23,7 @@ export interface DiagramResult {
   /** Output file paths (if successful) */
   paths?: {
     mmd?: string;
+    puml?: string;
     svg?: string;
     png?: string;
     json?: string;

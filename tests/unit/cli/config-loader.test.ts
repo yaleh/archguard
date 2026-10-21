@@ -97,7 +97,7 @@ describe('Story 5: Configuration File Support', () => {
     });
 
     it('should accept valid formats', async () => {
-      const formats = ['mermaid', 'json'];
+      const formats = ['mermaid', 'json', 'plantuml'];
 
       for (const format of formats) {
         const configPath = path.join(testDir, 'archguard.config.json');

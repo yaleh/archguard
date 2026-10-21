@@ -1,0 +1,31 @@
+@startuml
+package "Core Layer" as Core_Layer {
+  abstract class BaseEntity {
+    +{abstract} getId(): string
+  }
+  interface Timestamped {
+    +createdAt: Date
+  }
+  enum Role {
+    +Admin
+    +Member
+  }
+  class UserProfile {
+    +createdAt: Date
+    +role: Role
+    +getId(): string
+    +display(): string
+    +money(): Wallet
+  }
+  class Wallet {
+    +balance: number
+  }
+  class "Money$" as Money_ {
+    +amount: number
+  }
+}
+UserProfile --|> BaseEntity
+UserProfile ..|> Timestamped
+UserProfile *-- Role
+UserProfile ..> Wallet
+@enduml

@@ -1,0 +1,28 @@
+@startuml
+package "User Layer" as User_Layer {
+  class "User Profile" as User_Profile {
+    -readonly id: string
+    +getDisplayName(): string
+    +tags: Map
+  }
+  class Repository {
+    +items: Array
+    +find(id: string): any
+  }
+}
+package Core {
+  interface Store {
+    +save(value: string): void
+  }
+  enum Kind {
+    +Admin
+  }
+  abstract class "Base Entity" as Base_Entity {
+    #createdAt: Date
+  }
+}
+User_Profile --|> Base_Entity
+Repository ..|> Store
+User_Profile ..> Repository
+User_Profile --> Store
+@enduml

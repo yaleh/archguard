@@ -33,7 +33,12 @@ export type {
 
 // CLI-layer facade interfaces (decouple processors from concrete parser/renderer)
 export type { IParserFacade } from './parser-facade.js';
-export type { IRendererFacade, MermaidOutputOptions, RenderJob } from './renderer-facade.js';
+export type {
+  DiagramFormat,
+  DiagramOutputOptions,
+  IRendererFacade,
+  RenderJob,
+} from './renderer-facade.js';
 
 // Plugin error classes
 export {

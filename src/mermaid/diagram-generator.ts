@@ -16,7 +16,8 @@ import type { ArchJSON } from '../types/index.js';
 import type { GlobalConfig, DetailLevel, DiagramConfig } from '../types/config.js';
 import type { IRendererFacade } from '@/core/interfaces/renderer-facade.js';
 import type {
-  MermaidOutputOptions,
+  DiagramFormat,
+  DiagramOutputOptions,
   RenderJob,
 } from '@/core/interfaces/renderer-types.js';
 import { HeuristicGrouper } from './grouper.js';
@@ -37,7 +38,7 @@ const isQualityStage = (s: ValidationStage): s is Extract<ValidationStage, { nam
 
 // Re-exported so existing importers of this module keep their paths
 // (rules rendered by the mermaid layer and tests/integration/render-separation.test.ts).
-export type { MermaidOutputOptions, RenderJob };
+export type { DiagramFormat, DiagramOutputOptions, RenderJob };
 
 /**
  * Main generator for Mermaid diagrams
@@ -74,7 +75,7 @@ export class MermaidDiagramGenerator implements IRendererFacade {
    */
   async generateOnly(
     archJson: ArchJSON,
-    outputOptions: MermaidOutputOptions,
+    outputOptions: DiagramOutputOptions,
     level: DetailLevel,
     diagramConfig?: DiagramConfig
   ): Promise<RenderJob[]> {
@@ -119,8 +120,8 @@ export class MermaidDiagramGenerator implements IRendererFacade {
           : '✅ Mermaid code generated'
       );
 
-      // Base output directory (strip filename from mmd path)
-      const baseDir = outputOptions.paths.mmd.replace(/\/[^/]+\.mmd$/, '');
+      // Base output directory (strip filename from source path)
+      const baseDir = outputOptions.paths.source.replace(/\/[^/]+$/, '');
 
       if (isSplit) {
         // Split path: generate one render job per namespace group.
@@ -135,11 +136,11 @@ export class MermaidDiagramGenerator implements IRendererFacade {
               name === null
                 ? outputOptions.paths
                 : {
-                    mmd: `${baseDir}/${safeName}.mmd`,
+                    source: `${baseDir}/${safeName}.mmd`,
                     svg: `${baseDir}/${safeName}.svg`,
                     png: `${baseDir}/${safeName}.png`,
                   };
-            return { name: safeName, mermaidCode: content, outputPath };
+            return { name: safeName, diagramCode: content, format: 'mermaid', outputPath };
           });
       }
 
@@ -222,7 +223,8 @@ export class MermaidDiagramGenerator implements IRendererFacade {
       return [
         {
           name: outputOptions.baseName,
-          mermaidCode,
+          diagramCode: mermaidCode,
+          format: 'mermaid',
           outputPath: outputOptions.paths,
         },
       ];
@@ -265,7 +267,11 @@ export class MermaidDiagramGenerator implements IRendererFacade {
           };
 
           const renderer = new IsomorphicMermaidRenderer(rendererOptions);
-          await renderer.renderAndSave(job.mermaidCode, job.outputPath);
+          await renderer.renderAndSave(job.diagramCode, {
+            mmd: job.outputPath.source,
+            svg: job.outputPath.svg,
+            png: job.outputPath.png,
+          });
         },
         { concurrency }
       );
@@ -287,7 +293,7 @@ export class MermaidDiagramGenerator implements IRendererFacade {
    */
   async generateAndRender(
     archJson: ArchJSON,
-    outputOptions: MermaidOutputOptions,
+    outputOptions: DiagramOutputOptions,
     level: DetailLevel,
     diagramConfig?: DiagramConfig
   ): Promise<void> {
@@ -332,12 +338,12 @@ export class MermaidDiagramGenerator implements IRendererFacade {
 
       progress.info?.('\n✨ Generated files:');
       if (allRenderJobs.length === 1 && allRenderJobs[0]?.outputPath === outputOptions.paths) {
-        progress.info?.(`  📄 ${outputOptions.paths.mmd}`);
+        progress.info?.(`  📄 ${outputOptions.paths.source}`);
         progress.info?.(`  🖼️  ${outputOptions.paths.svg}`);
         progress.info?.(`  📊 ${outputOptions.paths.png}`);
       } else {
         for (const job of allRenderJobs) {
-          progress.info?.(`  📄 ${job.outputPath.mmd}`);
+          progress.info?.(`  📄 ${job.outputPath.source}`);
         }
       }
     } catch (error) {
@@ -367,7 +373,11 @@ export class MermaidDiagramGenerator implements IRendererFacade {
       jobs,
       async (job) => {
         const renderer = new IsomorphicMermaidRenderer(rendererOptions);
-        await renderer.renderAndSave(job.mermaidCode, job.outputPath);
+        await renderer.renderAndSave(job.diagramCode, {
+          mmd: job.outputPath.source,
+          svg: job.outputPath.svg,
+          png: job.outputPath.png,
+        });
       },
       { concurrency }
     );
