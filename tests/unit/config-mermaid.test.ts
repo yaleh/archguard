@@ -124,18 +124,16 @@ describe('ConfigLoader - Mermaid Configuration', () => {
     });
   });
 
-  describe('PlantUML format deprecation', () => {
-    it('should reject plantuml format with validation error', async () => {
-      const loader = new ConfigLoader('/tmp/test-config-reject');
+  describe('PlantUML format (emit-only)', () => {
+    it('should accept plantuml format as emit-only', async () => {
+      const loader = new ConfigLoader('/tmp/test-config-accept');
 
       const config: Partial<Config> = {
         format: 'plantuml' as any,
       };
 
-      await expect(loader.load(config)).rejects.toThrow(
-        /Invalid enum value|Invalid option|plantuml/
-      );
-      await expect(loader.load(config)).rejects.toThrow(/mermaid|json/);
+      const result = await loader.load(config);
+      expect(result.format).toBe('plantuml');
     });
 
     it('should reject svg format with validation error', async () => {
@@ -146,10 +144,10 @@ describe('ConfigLoader - Mermaid Configuration', () => {
       };
 
       await expect(loader.load(config)).rejects.toThrow(/Invalid enum value|Invalid option|svg/);
-      await expect(loader.load(config)).rejects.toThrow(/mermaid|json/);
+      await expect(loader.load(config)).rejects.toThrow(/mermaid|json|plantuml/);
     });
 
-    it('should reject plantuml in diagram config', async () => {
+    it('should accept plantuml in diagram config as emit-only', async () => {
       const loader = new ConfigLoader('/tmp/test-config-diagram');
 
       const config: Partial<Config> = {
@@ -164,9 +162,8 @@ describe('ConfigLoader - Mermaid Configuration', () => {
         ],
       };
 
-      await expect(loader.load(config)).rejects.toThrow(
-        /Invalid enum value|Invalid option|plantuml/
-      );
+      const result = await loader.load(config);
+      expect(result.diagrams?.[0]?.format).toBe('plantuml');
     });
   });
 

@@ -380,11 +380,11 @@ describe('Config validation errors (invalid config)', () => {
     // "  - <field.path>: <issue.message>" line (config-loader.ts:361-374).
     const loader = new ConfigLoader(testDir);
 
-    await expect(loader.load({ format: 'plantuml' as never })).rejects.toThrow(
+    await expect(loader.load({ format: 'svg' as never })).rejects.toThrow(
       'Configuration validation failed:'
     );
-    await expect(loader.load({ format: 'plantuml' as never })).rejects.toThrow(
-      / {2}- format: Invalid option: expected one of "mermaid"\|"json"/
+    await expect(loader.load({ format: 'svg' as never })).rejects.toThrow(
+      / {2}- format: Invalid option: expected one of "mermaid"\|"json"\|"plantuml"/
     );
   });
 
@@ -420,13 +420,13 @@ describe('Config validation errors (invalid config)', () => {
     // Same validation formatting applies when the bad value comes from a file
     // loaded through a custom path, not just from CLI options.
     const configPath = path.join(testDir, 'bad.config.json');
-    await fs.writeJson(configPath, { format: 'plantuml' });
+    await fs.writeJson(configPath, { format: 'svg' });
 
     await expect(new ConfigLoader(testDir).load({}, configPath)).rejects.toThrow(
       'Configuration validation failed:'
     );
     await expect(new ConfigLoader(testDir).load({}, configPath)).rejects.toThrow(
-      / {2}- format: Invalid option: expected one of "mermaid"\|"json"/
+      / {2}- format: Invalid option: expected one of "mermaid"\|"json"\|"plantuml"/
     );
   });
 });
