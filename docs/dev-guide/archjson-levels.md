@@ -204,6 +204,46 @@ arrays are at the same granularity and mutually consistent:
   (`sccCount` counts non-trivial cycles; `metrics.stronglyConnectedComponents`
   counts all components, including singletons — the two are not the same).
 
+### Relation type semantics (`RelationType`)
+
+ArchGuard emits the following relation types. The TypeScript extractor only
+produces `inheritance`, `implementation`, `composition`, `aggregation`,
+`dependency`, and `call`; `association` exists in the type union but no current
+plugin emits it.
+
+| Type | Meaning | TS source | Mermaid |
+|------|---------|-----------|---------|
+| `inheritance` | Subtype relationship | `class X extends Y`, `interface X extends Y` | `Y <\|-- X` |
+| `implementation` | Class realizes an interface | `class X implements Y` | `Y <\|.. X` |
+| `composition` | **Field holding.** The class declares a field whose type is `Y`. ArchGuard has no lifetime information, so this must **not** be read as strong ownership / shared lifetime; downstream consumers may conservatively map it to association/aggregation. | property type (`private x: Y;`, `private x = new Y();`) | `X *-- Y` |
+| `aggregation` | **Constructor injection / weak holding.** `Y` is passed in from outside; its lifecycle is owned by the caller. | constructor parameter type, including parameter properties (`constructor(private y: Y) {}`) | `X o-- Y` |
+| `dependency` | **Type reference without holding.** Imported names used in a function body, and method/function parameter and return types. | imports + method/function signatures | `X --> Y` |
+| `association` | Generic association. Reserved in the enum; not produced by any current plugin. | — | `X --> Y` (PlantUML) |
+| `call` | Method/function invocation edge. At class level only source/target entities are stored (method names are dropped); method-level `call` relations also carry `sourceMethod`, `targetMethod`, and `callType`. | `CallEdgeExtractor` | not drawn |
+
+**Boundary examples — `dependency` vs `composition`/`aggregation`:**
+
+```typescript
+class Repo {}
+class Service {
+  private repo: Repo;                  // composition: Service holds a Repo field
+  constructor(repo: Repo) { ... }      // aggregation: Repo is injected
+  save(r: Repo): void { ... }          // dependency: Repo is only a parameter type
+  load(): Repo { ... }                 // dependency: Repo is only a return type
+}
+```
+
+If the same `(source, target)` pair is both field-held and constructor-injected,
+only `composition` is emitted — a pair carries one ownership semantic. Method
+parameters / return types of the same type may still add a `dependency` edge.
+
+Field vs constructor is determined syntactically. Parameter properties
+(`constructor(private repo: Repo)`) are constructor parameters, not field
+declarations, so they produce `aggregation`. No attempt is made to infer
+strong vs weak ownership from initializers (`new Y()` vs an injected value),
+because ArchGuard has no lifetime information — adding that heuristic would
+over-claim again.
+
 ---
 
 ## Comparison Table

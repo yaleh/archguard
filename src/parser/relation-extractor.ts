@@ -59,8 +59,15 @@ function collectExternalImportedNames(sourceFile: SourceFile): Set<string> {
 }
 
 /**
- * Extracts relationships (inheritance, implementation, composition, dependency)
- * from TypeScript source code
+ * Extracts relationships (inheritance, implementation, composition, aggregation,
+ * dependency) from TypeScript source code.
+ *
+ * UML semantics used here:
+ *   - `composition` — the class declares a field of the type (field holding).
+ *     ArchGuard has no lifetime information, so this is "holds a field", not a
+ *     claim of strong ownership / shared lifetime.
+ *   - `aggregation`  — the type is injected through a constructor parameter
+ *     (including parameter properties). The instance is owned by the caller.
  */
 export class RelationExtractor extends BaseExtractor {
   /**
@@ -132,20 +139,33 @@ export class RelationExtractor extends BaseExtractor {
       this.addRelation(relations, relationSet, 'implementation', className, interfaceName);
     }
 
-    // Extract composition from properties
+    // Extract composition from properties (field holding).
+    // Track the resulting (source, target) pairs so the same pair is not also
+    // emitted as aggregation below — a relation pair carries exactly one
+    // ownership semantic.
+    const fieldPairs = new Set<string>();
     for (const property of classDecl.getProperties()) {
       const propertyType = this.extractTypeName(property.getType().getText());
       if (propertyType && this.isCustomType(propertyType) && !externalNames.has(propertyType)) {
         this.addRelation(relations, relationSet, 'composition', className, propertyType);
+        fieldPairs.add(propertyType);
       }
     }
 
-    // Extract composition from constructor parameters
+    // Extract aggregation from constructor parameters (external injection).
+    // Parameter properties are not returned by getProperties(), so
+    // `constructor(private repo: Repo)` lands here. If the class also declares a
+    // field of the same type, the field-level composition relation wins.
     for (const constructor of classDecl.getConstructors()) {
       for (const param of constructor.getParameters()) {
         const paramType = this.extractTypeName(param.getType().getText());
-        if (paramType && this.isCustomType(paramType) && !externalNames.has(paramType)) {
-          this.addRelation(relations, relationSet, 'composition', className, paramType);
+        if (
+          paramType &&
+          this.isCustomType(paramType) &&
+          !externalNames.has(paramType) &&
+          !fieldPairs.has(paramType)
+        ) {
+          this.addRelation(relations, relationSet, 'aggregation', className, paramType);
         }
       }
     }
