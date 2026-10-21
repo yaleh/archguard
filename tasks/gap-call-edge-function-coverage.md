@@ -46,15 +46,15 @@ depends_on:
 
 ## AC
 
-- [ ] 覆盖矩阵夹具（顶层函数调用、导出箭头函数调用、裸标识符 callee、类方法内裸调用、跨文件函数调用）均产出带正确 `sourceMethod` 的 call 边；负对照：`fs.readFile` / `console.log` 等外部 API 不产边
-- [ ] 按声明解析：夹具里两个同名 `main` 函数跨文件存在时，调用只连各自声明，不互相串连；实现中不得使用裸名 Map 解析目标
-- [ ] 目标方法存在性校验：调用不存在的方法（夹具 `A.s()` 且 A 无 s）不产边
-- [ ] 明确边界被机械钉住：非导出函数仍不新增实体，相关调用点计数在 verbose 输出里可见；对象字面量方法/构造函数体/类属性箭头函数的“不支持”有断言或注释
-- [ ] 健壮性：TypeChecker 查询逐点 try/catch；在 quay 副本上全量跑完不因 ts-morph 内部异常崩溃（实测约 10,693 次异常）
-- [ ] 真实数据：quay 副本复跑后 `relationCountByType.call` 从 2 升到 ≥5,000，并抽样人工核对 5 条边（source/sourceMethod/target/targetMethod）确实对应真实调用
-- [ ] 性能有数字：记录 quay 534 文件分析耗时与内存增量（相对修复前），给出可接受性判断
-- [ ] `src/cli/mcp/tools/call-graph-tools.ts` 的精度/覆盖描述与新实现一致
-- [ ] `bash scripts/test.sh --for-task gap-call-edge-function-coverage` 与 `npm run type-check` 通过
+- [x] 覆盖矩阵夹具（顶层函数调用、导出箭头函数调用、裸标识符 callee、类方法内裸调用、跨文件函数调用）均产出带正确 `sourceMethod` 的 call 边；负对照：`fs.readFile` / `console.log` 等外部 API 不产边
+- [x] 按声明解析：夹具里两个同名 `main` 函数跨文件存在时，调用只连各自声明，不互相串连；实现中不得使用裸名 Map 解析目标
+- [x] 目标方法存在性校验：调用不存在的方法（夹具 `A.s()` 且 A 无 s）不产边
+- [x] 明确边界被机械钉住：非导出函数仍不新增实体，相关调用点计数在 verbose 输出里可见；对象字面量方法/构造函数体/类属性箭头函数的“不支持”有断言或注释
+- [x] 健壮性：TypeChecker 查询逐点 try/catch；在 quay 副本上全量跑完不因 ts-morph 内部异常崩溃（实测约 10,693 次异常）
+- [x] 真实数据：quay 副本复跑后 `relationCountByType.call` 从 2 升到 ≥5,000，并抽样人工核对 5 条边（source/sourceMethod/target/targetMethod）确实对应真实调用
+- [x] 性能有数字：记录 quay 534 文件分析耗时与内存增量（相对修复前），给出可接受性判断
+- [x] `src/cli/mcp/tools/call-graph-tools.ts` 的精度/覆盖描述与新实现一致
+- [x] `bash scripts/test.sh --for-task gap-call-edge-function-coverage` 与 `npm run type-check` 通过
 
 ## DoD
 
@@ -66,6 +66,9 @@ depends_on:
 - src/parser/call-edge-extractor.ts
 - src/parser/function-extractor.ts
 - src/cli/mcp/tools/call-graph-tools.ts
+- src/parser/typescript-parser.ts
+- src/plugins/typescript/index.ts
+- src/cli/processors/arch-json-provider.ts
 - tests/unit/parser/call-edge-extractor.test.ts
 - tests/unit/parser/function-extractor.test.ts
 - tests/unit/cli/mcp/call-graph-tools.test.ts
