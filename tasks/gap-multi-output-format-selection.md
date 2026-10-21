@@ -55,6 +55,8 @@ router `route()` 由单分支改为按集合循环。选择接口只决定「要
 - src/cli/utils/cpp-project-structure-detector.ts
 - src/cli/utils/java-project-structure-detector.ts
 - src/cli/utils/kotlin-project-structure-detector.ts
+- scripts/migrate-to-mermaid.ts
+- scripts/benchmark-parser-backends.mjs
 - tests/unit/cli/config-loader.test.ts
 - tests/unit/cli/config-loader-plantuml-removal.test.ts
 - tests/unit/cli/analyze-command.test.ts
