@@ -2,7 +2,7 @@
 id: gap-class-diagram-directory-namespaces
 title: class 图只发一层启发式 namespace：Quay_Layer 601 类、Scripts_Layer 2343
   类挤在一个块，目录结构丢失（quay 实测）
-status: ready
+status: done
 labels:
   - gap
   - mermaid
