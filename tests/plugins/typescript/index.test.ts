@@ -314,6 +314,59 @@ describe('TypeScriptPlugin - T1.1.2 Parser Wrapping', () => {
       const distEntities = result.entities.filter((e) => e.name === 'AppCompiled');
       expect(distEntities).toHaveLength(0);
     });
+
+    it('should exclude dist, vendor and archive by default', async () => {
+      await fs.ensureDir(path.join(tempDir, 'src'));
+      await fs.writeFile(path.join(tempDir, 'src/keep.ts'), 'export class Keep {}');
+      for (const [dir, name] of [
+        ['dist', 'DistEntity'],
+        ['vendor', 'VendorEntity'],
+        ['archive', 'ArchiveEntity'],
+      ] as const) {
+        await fs.ensureDir(path.join(tempDir, dir));
+        await fs.writeFile(path.join(tempDir, dir, 'generated.ts'), `export class ${name} {}`);
+      }
+
+      const result = await plugin.parseProject(tempDir, {
+        workspaceRoot: tempDir,
+        excludePatterns: [],
+      });
+
+      const names = result.entities.map((e) => e.name);
+      expect(names).toContain('Keep');
+      expect(names).not.toContain('DistEntity');
+      expect(names).not.toContain('VendorEntity');
+      expect(names).not.toContain('ArchiveEntity');
+    });
+
+    it('should let an explicit excludePatterns list replace the defaults', async () => {
+      // Negative control for the shared-default contract: no builtin `**/dist/**`
+      // rule is added when the caller supplies its own list.
+      await fs.ensureDir(path.join(tempDir, 'src'));
+      await fs.ensureDir(path.join(tempDir, 'dist'));
+      await fs.writeFile(path.join(tempDir, 'src/main.ts'), 'export class Main {}');
+      await fs.writeFile(path.join(tempDir, 'dist/app.ts'), 'export class AppCompiled {}');
+
+      const result = await plugin.parseProject(tempDir, {
+        workspaceRoot: tempDir,
+        excludePatterns: ['**/generated/**'],
+      });
+
+      expect(result.entities.map((e) => e.name)).toContain('AppCompiled');
+    });
+
+    it('should analyze an explicitly selected default-excluded workspace root', async () => {
+      const distRoot = path.join(tempDir, 'dist');
+      await fs.ensureDir(distRoot);
+      await fs.writeFile(path.join(distRoot, 'gen.ts'), 'export class GenEntity {}');
+
+      const result = await plugin.parseProject(distRoot, {
+        workspaceRoot: distRoot,
+        excludePatterns: [],
+      });
+
+      expect(result.entities.map((e) => e.name)).toContain('GenEntity');
+    });
   });
 
   describe('parseFiles', () => {

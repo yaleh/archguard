@@ -19,6 +19,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import type { DiagramConfig } from '../../types/config.js';
+import { defaultExcludeDirectoryNames } from './default-excludes.js';
 
 /** Source root candidates, checked in priority order */
 const SOURCE_ROOT_CANDIDATES = ['src', 'lib', 'app', 'source'];
@@ -37,6 +38,9 @@ const EXCLUDED_DIRS = new Set([
   '.cache',
   '.tmp',
   'tmp',
+  // Shared default exclusions (node_modules / dist / vendor / archive) so
+  // auto-detection never declares a diagram for a default-excluded tree.
+  ...defaultExcludeDirectoryNames(),
 ]);
 
 /**

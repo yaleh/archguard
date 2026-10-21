@@ -18,7 +18,7 @@ export interface IgnoreRuleSet {
 }
 
 export interface ExcludeReportEntry {
-  source: IgnoreSource | 'config exclude';
+  source: IgnoreSource | 'config exclude' | 'default exclude';
   count: number;
   rules: string[];
   /** Files dropped by this source (relative to project root) */
