@@ -2,7 +2,7 @@
 id: gap-arch-index-entity-types
 title: arch-index 缺 entity.type：下游无法判断 UML stereotype（claudecodeui 800 function
   vs 6 class 只能回读 arch.json）
-status: todo
+status: ready
 labels:
   - gap
   - query
