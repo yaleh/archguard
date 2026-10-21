@@ -5,6 +5,7 @@
 import path from 'path';
 import type { ArchJSON } from '../types/index.js';
 import type { GroupingDecision, PackageGroup, LayoutDecision, GrouperConfig } from './types.js';
+import { compareEntitiesForDiagram } from './generator-grouping.js';
 
 /**
  * Heuristic Grouper - Groups entities based on file path patterns
@@ -40,14 +41,19 @@ export class HeuristicGrouper {
       };
     }
 
-    // Apply custom rules first
-    const customGrouped = this.applyCustomRules(archJson);
+    // Apply custom rules first. Entities are sorted before grouping so the
+    // resulting group/entity order does not depend on file-discovery order.
+    const sortedArchJson: ArchJSON = {
+      ...archJson,
+      entities: [...archJson.entities].sort(compareEntitiesForDiagram),
+    };
+    const customGrouped = this.applyCustomRules(sortedArchJson);
     if (customGrouped) {
       return customGrouped;
     }
 
     // Group by file path
-    const packages = this.groupByPath(archJson);
+    const packages = this.groupByPath(sortedArchJson);
 
     // Merge small packages if needed
     const mergedPackages = this.mergeSmallPackages(packages);
@@ -213,7 +219,11 @@ export class HeuristicGrouper {
       );
     }
 
-    return Array.from(groups.values());
+    return Array.from(groups.values()).sort((left, right) => {
+      const leftKey = left.path?.join('/') ?? left.name;
+      const rightKey = right.path?.join('/') ?? right.name;
+      return leftKey.localeCompare(rightKey);
+    });
   }
 
   /**
@@ -255,7 +265,6 @@ export class HeuristicGrouper {
 
     return dir.split('/').filter((segment) => segment !== '' && segment !== '.');
   }
-
 
   private extractJavaMavenModuleName(filePath: string): string | null {
     if (!filePath || filePath.trim() === '') {
@@ -401,7 +410,11 @@ export class HeuristicGrouper {
       // Skip merging for protected groups (directory-path / Maven module based).
       // They already represent meaningful project boundaries and merging them
       // would erase the directory hierarchy this grouping exists to preserve.
-      if (current.entities.length <= threshold && !isProtectedGroup(current) && i + 1 < packages.length) {
+      if (
+        current.entities.length <= threshold &&
+        !isProtectedGroup(current) &&
+        i + 1 < packages.length
+      ) {
         // Merge with next package
         const next = packages[i + 1];
         if (next && !skipIndices.has(i + 1) && !isProtectedGroup(next)) {

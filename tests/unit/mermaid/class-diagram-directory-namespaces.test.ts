@@ -47,7 +47,9 @@ function makeGenerator(archJson: ArchJSON): ValidatedMermaidGenerator {
 
 /** Namespace ids emitted in a diagram, e.g. `a.b.c`. */
 function namespaceIds(mermaidCode: string): string[] {
-  return Array.from(mermaidCode.matchAll(/^\s*namespace\s+([^\s{]+)\s*\{/gm)).map((m) => m[1]!);
+  return Array.from(mermaidCode.matchAll(/^\s*namespace\s+([^\s{]+)\s*\{/gm)).map(
+    (m) => m[1] ?? ''
+  );
 }
 
 describe('class diagram directory namespaces', () => {
@@ -56,9 +58,14 @@ describe('class diagram directory namespaces', () => {
     // as a syntax error, so hierarchy must be encoded as dotted ids and/or
     // split files rather than real nesting. If a future upgrade starts
     // supporting nesting, this test fails and the route can be revisited.
-    const nested = ['classDiagram', '  namespace a {', '    namespace b {', '      class C', '    }', '  }'].join(
-      '\n'
-    );
+    const nested = [
+      'classDiagram',
+      '  namespace a {',
+      '    namespace b {',
+      '      class C',
+      '    }',
+      '  }',
+    ].join('\n');
 
     await expect(new IsomorphicMermaidRenderer().renderSVG(nested)).rejects.toThrow(
       /Failed to render SVG/
@@ -159,11 +166,11 @@ describe('class diagram directory namespaces', () => {
     ]);
     for (const chunk of diagrams.slice(0, 4)) {
       expect(namespaceIds(chunk.content)).toEqual(['flat.dir']);
-      expect((chunk.content.match(/^    class F\d+/gm) ?? []).length).toBeLessThanOrEqual(3);
+      expect((chunk.content.match(/^ {4}class F\d+/gm) ?? []).length).toBeLessThanOrEqual(3);
     }
     // No class is dropped by chunking.
     const emitted = diagrams
-      .flatMap((d) => d.content.match(/^    class F\d+/gm) ?? [])
+      .flatMap((d) => d.content.match(/^ {4}class F\d+/gm) ?? [])
       .filter((line, index, all) => all.indexOf(line) === index);
     expect(emitted).toHaveLength(10);
   });

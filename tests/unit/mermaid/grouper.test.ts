@@ -496,10 +496,7 @@ describe('HeuristicGrouper', () => {
       // grouping exists to preserve.
       expect(result.packages.some((p) => p.name.includes(' & '))).toBe(false);
       expect(result.packages).toHaveLength(2);
-      expect(result.packages.map((p) => p.path?.join('/'))).toEqual([
-        'src/services',
-        'src/repos',
-      ]);
+      expect(result.packages.map((p) => p.path?.join('/'))).toEqual(['src/repos', 'src/services']);
     });
   });
 

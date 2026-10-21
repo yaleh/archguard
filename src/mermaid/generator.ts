@@ -17,7 +17,11 @@ import type {
   MermaidTheme,
 } from './types.js';
 import { CommentGenerator } from './comment-generator.js';
-import { groupEntitiesByPackage } from './generator-grouping.js';
+import {
+  groupEntitiesByPackage,
+  compareEntitiesForDiagram,
+  compareRelationsForDiagram,
+} from './generator-grouping.js';
 import { validateGeneratorInput } from './generator-validation.js';
 import {
   ENTITY_CLASSDEF_STYLES,
@@ -77,7 +81,6 @@ function outputNameForGroup(group: PackageGroup): string {
   return group.path && group.path.length > 0 ? group.path.join('.') : group.name;
 }
 
-
 /**
  * Validated Mermaid Generator
  * Generates Mermaid class diagrams with full validation
@@ -103,7 +106,13 @@ export class ValidatedMermaidGenerator {
     },
     diagramConfig?: DiagramConfig
   ) {
-    this.archJson = archJson;
+    this.archJson = {
+      ...archJson,
+      // Deterministic output: file discovery / parallel parsing do not guarantee
+      // a stable ArchJSON order, so sort entities and relations explicitly.
+      entities: [...archJson.entities].sort(compareEntitiesForDiagram),
+      relations: [...archJson.relations].sort(compareRelationsForDiagram),
+    };
     this.options = {
       level: options.level,
       grouping: options.grouping,
