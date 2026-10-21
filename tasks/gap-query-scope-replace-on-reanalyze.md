@@ -35,12 +35,12 @@ extra:
 
 ## AC
 
-- [ ] 夹具 manifest 同时含 legacy 路径别名（`/home/...` 与 `/data/...` 指向同一 realpath、相对路径）与当前绝对路径条目：执行一次 persist 后同一身份只剩一条，key 等于用当前绝对 realpath 计算的值，旧 key 目录被迁移/删除、manifest 与磁盘目录一一对应
-- [ ] 负对照：源集合确实不同的 scope（如 `packages` 与 `plugin/scripts`）在 persist 后仍各自保留且可正常加载查询
-- [ ] 陈旧回收：`sources` 全部不存在的条目在 persist 后不再出现在 `availableScopes`（选择移除或显式 stale 标记，并在实现/测试中写清是哪一种）
-- [ ] 真实数据验证：复制 `/data/home/yale/work/quay/.archguard/query` 到 `/tmp` 夹具，跑一次 persist 后 scope 数从 26 下降；断言不再存在「相同 realpath 源集合 + 相同 language」的重复身份，且所有保留 scope 的 `arch.json` 都能加载
-- [ ] 不需要手工执行 `cache prune-scopes` 就能得到上述结果（prune 仍是显式清理，不替代身份归一）
-- [ ] `bash scripts/test.sh --for-task gap-query-scope-replace-on-reanalyze` 与 `npm run type-check` 通过
+- [x] 夹具 manifest 同时含 legacy 路径别名（`/home/...` 与 `/data/...` 指向同一 realpath、相对路径）与当前绝对路径条目：执行一次 persist 后同一身份只剩一条，key 等于用当前绝对 realpath 计算的值，旧 key 目录被迁移/删除、manifest 与磁盘目录一一对应
+- [x] 负对照：源集合确实不同的 scope（如 `packages` 与 `plugin/scripts`）在 persist 后仍各自保留且可正常加载查询
+- [x] 陈旧回收：`sources` 全部不存在的条目在 persist 后不再出现在 `availableScopes`（选择移除或显式 stale 标记，并在实现/测试中写清是哪一种）
+- [x] 真实数据验证：复制 `/data/home/yale/work/quay/.archguard/query` 到 `/tmp` 夹具，跑一次 persist 后 scope 数从 26 下降；断言不再存在「相同 realpath 源集合 + 相同 language」的重复身份，且所有保留 scope 的 `arch.json` 都能加载
+- [x] 不需要手工执行 `cache prune-scopes` 就能得到上述结果（prune 仍是显式清理，不替代身份归一）
+- [x] `bash scripts/test.sh --for-task gap-query-scope-replace-on-reanalyze` 与 `npm run type-check` 通过
 
 ## DoD
 
