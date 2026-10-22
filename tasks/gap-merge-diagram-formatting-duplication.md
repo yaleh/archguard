@@ -1,7 +1,7 @@
 ---
 id: gap-merge-diagram-formatting-duplication
 title: 合并 plantuml/mermaid 的 generator-formatting 重复，格式无关逻辑抽共享模块
-status: todo
+status: ready
 labels:
   - gap
   - refactor
