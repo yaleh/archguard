@@ -303,8 +303,8 @@ export async function analyzeCommandHandler(cliOptions: CLIOptions): Promise<voi
     process.exit(result.hasDiagramFailures ? 1 : 0);
   } catch (error) {
     progress.fail('Analysis failed');
-    const errorHandler = new ErrorHandler();
-    console.error(errorHandler.format(error, { verbose: cliOptions.verbose || false }));
+    const errorHandler = new ErrorHandler({ verbose: cliOptions.verbose || false });
+    console.error(errorHandler.format(error));
     process.exit(1);
   }
 }

@@ -172,7 +172,7 @@ describe('Story 4: Error Handling Optimization', () => {
     it('should use chalk formatting when color is enabled', () => {
       const error = new ParseError('Test error', 'test.ts', 10);
 
-      const coloredMessage = handler.format(error, { color: true });
+      const coloredMessage = new ErrorHandler({ color: true }).format(error);
 
       // Verify formatting was applied (chalk may or may not add ANSI codes depending on env)
       // So we just verify the format method accepts color option
@@ -183,7 +183,7 @@ describe('Story 4: Error Handling Optimization', () => {
     it('should format without chalk when color is disabled', () => {
       const error = new ParseError('Test error', 'test.ts', 10);
 
-      const plainMessage = handler.format(error, { color: false });
+      const plainMessage = new ErrorHandler({ color: false }).format(error);
 
       // Plain text should still contain the error information
       expect(plainMessage).toContain('Parse Error');
@@ -193,10 +193,20 @@ describe('Story 4: Error Handling Optimization', () => {
   });
 
   describe('Verbose Mode', () => {
+    it('holds the verbose flag injected at construction', () => {
+      const error = new Error('Constructor-held context');
+
+      // format() takes only the error; the flag comes from the instance.
+      const message = new ErrorHandler({ verbose: true }).format(error);
+
+      expect(message).toContain('Constructor-held context');
+      expect(message).toContain('at ');
+    });
+
     it('should include stack trace in verbose mode', () => {
       const error = new Error('Test error');
 
-      const verboseMessage = handler.format(error, { verbose: true });
+      const verboseMessage = new ErrorHandler({ verbose: true }).format(error);
 
       expect(verboseMessage).toContain('at ');
       expect(verboseMessage.split('\n').length).toBeGreaterThan(3);
@@ -205,7 +215,7 @@ describe('Story 4: Error Handling Optimization', () => {
     it('should not include stack trace in non-verbose mode', () => {
       const error = new Error('Test error');
 
-      const normalMessage = handler.format(error, { verbose: false });
+      const normalMessage = new ErrorHandler({ verbose: false }).format(error);
 
       // Should only contain the error message, not stack trace lines
       const lines = normalMessage.split('\n').filter((l) => l.trim());
