@@ -5,6 +5,21 @@ All notable changes to ArchGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.43] - 2026-10-22
+
+### Changed
+- **合并 PlantUML / Mermaid 格式化重复** — 抽出共享 `src/diagram/generator-formatting.ts`，
+  `normalizeEntityName` / `isNoisyTarget` / `shouldIncludeMember` 等格式无关逻辑只保留一份，
+  两个 `generator-formatting.ts` 的格式差异通过参数/策略注入，不再复制函数体。
+- **13 个「穿 class 外衣的函数」降级为模块函数** — mermaid 校验器（`QualityValidator` /
+  `StructuralValidator`）、`CommentGenerator` / `CppPackageFlowchartGenerator` /
+  `TestCoverageRenderer`、`TestIssueDetector` / `TestCoverageMapper`、`MetricsHistoryWriter` /
+  `TestOutputWriter`、`MetricsCalculator` / `ArchJSONAggregator`、`DriftCalculator`、
+  `FrameworkDetector` 等无状态纯处理类改为模块函数或并入调用方。
+- **3 个无状态类反向富化为有状态对象** — `ErrorHandler` 构造时注入 `verbose`、
+  `ClusterBoundaryAnalyzer` / `BoundaryAlignmentScorer` 构造时注入距离矩阵、
+  `KMeansClusterer` 构造时注入 `k` 与点集，公开方法不再每次重复携带同一上下文。
+
 ## [0.1.42] - 2026-10-21
 
 ### Added
