@@ -16,13 +16,13 @@ extra:
 
 ## AC
 
-- [ ] mermaid 校验器：`QualityValidator` 与 `StructuralValidator`（`src/mermaid/validator-quality.ts` / `validator-structural.ts`）降为模块函数或合并成一个 validation 模块，`grep -rn "class QualityValidator\|class StructuralValidator" src/` 返回 0；`tests/unit/mermaid/validator-quality.test.ts`、`validator-structural.test.ts`、`validation-pipeline.test.ts` 绿
-- [ ] `CommentGenerator` / `CppPackageFlowchartGenerator` / `TestCoverageRenderer`（`src/mermaid/*`）降为模块函数，`grep -rn "class CommentGenerator\|class CppPackageFlowchartGenerator\|class TestCoverageRenderer" src/` 返回 0；`comment-generator.test.ts`、`cpp-package-flowchart-generator.test.ts`、`test-coverage-renderer.test.ts` 绿
-- [ ] `TestIssueDetector` + `TestCoverageMapper`（`src/analysis/test-*.ts`）降为模块函数或并入 `test-analyzer.ts`；`test-issue-detector.test.ts`、`test-coverage-mapper.test.ts` 绿
-- [ ] `MetricsHistoryWriter` + `TestOutputWriter`（`src/cli/*`）降为模块函数；`metrics-history-writer.test.ts`、`test-output-writer.test.ts` 绿
-- [ ] `MetricsCalculator` + `ArchJSONAggregator`（`src/parser/*`）降为模块函数；`metrics-calculator.test.ts`、`archjson-aggregator.test.ts` 绿
-- [ ] `DriftCalculator`（`src/analysis/jl/drift-calculator.ts`）降为模块函数；`drift-calculator.test.ts` 绿
-- [ ] `FrameworkDetector`（`src/plugins/golang/atlas/framework-detector.ts`）降为模块函数，调用方同步更新
+- [x] mermaid 校验器：`QualityValidator` 与 `StructuralValidator`（`src/mermaid/validator-quality.ts` / `validator-structural.ts`）降为模块函数或合并成一个 validation 模块，`grep -rn "class QualityValidator\|class StructuralValidator" src/` 返回 0；`tests/unit/mermaid/validator-quality.test.ts`、`validator-structural.test.ts`、`validation-pipeline.test.ts` 绿
+- [x] `CommentGenerator` / `CppPackageFlowchartGenerator` / `TestCoverageRenderer`（`src/mermaid/*`）降为模块函数，`grep -rn "class CommentGenerator\|class CppPackageFlowchartGenerator\|class TestCoverageRenderer" src/` 返回 0；`comment-generator.test.ts`、`cpp-package-flowchart-generator.test.ts`、`test-coverage-renderer.test.ts` 绿
+- [x] `TestIssueDetector` + `TestCoverageMapper`（`src/analysis/test-*.ts`）降为模块函数或并入 `test-analyzer.ts`；`test-issue-detector.test.ts`、`test-coverage-mapper.test.ts` 绿
+- [x] `MetricsHistoryWriter` + `TestOutputWriter`（`src/cli/*`）降为模块函数；`metrics-history-writer.test.ts`、`test-output-writer.test.ts` 绿
+- [x] `MetricsCalculator` + `ArchJSONAggregator`（`src/parser/*`）降为模块函数；`metrics-calculator.test.ts`、`archjson-aggregator.test.ts` 绿
+- [x] `DriftCalculator`（`src/analysis/jl/drift-calculator.ts`）降为模块函数；`drift-calculator.test.ts` 绿
+- [x] `FrameworkDetector`（`src/plugins/golang/atlas/framework-detector.ts`）降为模块函数，调用方同步更新
 
 ## DoD
 
@@ -56,3 +56,27 @@ extra:
 - tests/unit/parser/archjson-aggregator.test.ts
 - tests/unit/analysis/jl/drift-calculator.test.ts
 - tasks/gap-demote-pure-processing-classes.md
+- src/mermaid/validation-pipeline.ts
+- src/mermaid/generator.ts
+- src/mermaid/index.ts
+- src/parser/index.ts
+- src/analysis/test-analyzer.ts
+- src/cli/analyze/run-analysis.ts
+- src/cli/commands/analyze.ts
+- src/cli/commands/query.ts
+- src/cli/mcp/tools/arch-health-tools.ts
+- src/cli/processors/diagram-output-router.ts
+- src/cli/processors/diagram-pipeline-runner.ts
+- src/cli/processors/diagram-processor.ts
+- src/cli/processors/test-coverage-writer.ts
+- src/plugins/golang/go-atlas-coordinator.ts
+- tests/unit/mermaid/validation-pipeline.test.ts
+- tests/unit/analysis/metrics-history-reader.test.ts
+- tests/unit/cli/analyze/run-analysis.test.ts
+- tests/unit/cli/processors/diagram-output-router.test.ts
+- tests/unit/cli/processors/diagram-pipeline-runner.test.ts
+- tests/unit/cli/processors/diagram-processor-query-scopes.test.ts
+- tests/unit/cli/processors/diagram-processor.test.ts
+- tests/unit/cli/processors/test-coverage-writer.test.ts
+- tests/integration/parallel-diagrams.test.ts
+- tests/plugins/golang/atlas/framework-detector.test.ts
