@@ -1,7 +1,7 @@
 ---
 id: gap-break-plugin-shared-hub-cycle
 title: src/plugins/shared 作为 hub 反向依赖具体语言插件，形成 13 模块 package 环（plugin-factory 放错层）
-status: ready
+status: done
 labels:
   - gap
   - refactor
