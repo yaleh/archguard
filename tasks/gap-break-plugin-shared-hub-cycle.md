@@ -39,21 +39,32 @@ src/plugins/shared          ← hub
 
 ## AC
 
-- [ ] 断环判据先红后绿：新测试在改动前对当前 HEAD 运行，报告 `plugin-factory.ts` 的 5 条 concrete import 违规（红）；移动 factory 后同测试通过（绿），且不依赖 mock/跳过
-- [ ] `src/plugins/shared/**` 在移动后对具体语言插件目录的 import 计数为 0（静态 import + 动态 `await import` + 相对路径三种形式都覆盖）
-- [ ] `createLanguagePlugin` 的两个调用方（`run-analysis.ts`、`arch-json-provider.ts`）与三个测试文件全部改指向新路径，全仓 grep `shared/plugin-factory` 零命中
-- [ ] 既有边界不变：`plugin-construction-boundary.test.ts` 仍只允许在 factory 内 `new XxxPlugin`，`FACTORY` 指向新路径后该测试保持绿
-- [ ] 负对照（防搬家凑数）：把 factory 移到 `shared/` 外的任意位置后，`shared` 不得通过任何新 import 重新指回具体插件；测试明确断言的是「shared 对 concrete 的出边为 0」，而不是「factory 在某个特定路径」
-- [ ] 真实数据：对 archguard 自身重跑 package 级分析，13 模块 SCC 不再包含 `src/plugins/shared`；给出修复前后的 SCC 成员清单对照（残留的 golang/cpp/kotlin 内部小环允许存在并列出，不作为失败条件）
-- [ ] 明确边界：golang/cpp/kotlin 插件内部环不在本任务；不新增任何对 `core/parser` 的反向依赖
-- [ ] `bash scripts/test.sh --for-task gap-break-plugin-shared-hub-cycle` 与 `npm run type-check` 通过
+- [x] 断环判据先红后绿：新测试在改动前对当前 HEAD 运行，报告 `plugin-factory.ts` 的 5 条 concrete import 违规（红）；移动 factory 后同测试通过（绿），且不依赖 mock/跳过
+- [x] `src/plugins/shared/**` 在移动后对具体语言插件目录的 import 计数为 0（静态 import + 动态 `await import` + 相对路径三种形式都覆盖）
+- [x] `createLanguagePlugin` 的两个调用方（`run-analysis.ts`、`arch-json-provider.ts`）与三个测试文件全部改指向新路径，全仓 grep `shared/plugin-factory` 零命中
+- [x] 既有边界不变：`plugin-construction-boundary.test.ts` 仍只允许在 factory 内 `new XxxPlugin`，`FACTORY` 指向新路径后该测试保持绿
+- [x] 负对照（防搬家凑数）：把 factory 移到 `shared/` 外的任意位置后，`shared` 不得通过任何新 import 重新指回具体插件；测试明确断言的是「shared 对 concrete 的出边为 0」，而不是「factory 在某个特定路径」
+- [x] 真实数据：对 archguard 自身重跑 package 级分析，13 模块 SCC 不再包含 `src/plugins/shared`；给出修复前后的 SCC 成员清单对照（残留的 golang/cpp/kotlin 内部小环允许存在并列出，不作为失败条件）
+- [x] 明确边界：golang/cpp/kotlin 插件内部环不在本任务；不新增任何对 `core/parser` 的反向依赖
+- [x] `bash scripts/test.sh --for-task gap-break-plugin-shared-hub-cycle` 与 `npm run type-check` 通过
 
 ## DoD
 
 不是「factory 文件挪个目录、import 改个路径」就算完成。要在改动前先跑一遍新断环判据证明它红（抓到 5 条 concrete import），改动后同判据绿；再用 archguard 分析自身，给出修复前后的 package SCC 成员清单，证明 `src/plugins/shared` 已从 13 模块环里退出；同时确认「只有 factory 能构造插件」的既有边界测试仍绿，且没有通过新增别的 shared→concrete import 来偷换。
 
+## Evidence
+
+- 断环判据先红：新增 `tests/unit/architecture/shared-plugin-boundary.test.ts`，在移动 factory 前对 HEAD 运行 → FAIL，报告 `src/plugins/shared/plugin-factory.ts` 的 5 条 concrete import（`@/plugins/{golang/atlas,java,python,cpp,kotlin}/index.js`，全部为 dynamic import）。
+- 移动 factory 后同测试 → PASS（3/3）：真实扫描命中 0；负例覆盖 static import / re-export / dynamic import / require / import type，且别名与相对路径两种写法都覆盖。
+- 真实数据（archguard 自身 package 级 SCC）：
+  - 修复前（scope `8f71319d`）：13 模块 SCC = `src/plugins/{cpp,cpp/builders,cpp/mappers,golang,golang/atlas,golang/atlas/builders,golang/atlas/renderers,golang/builders,java,kotlin,kotlin/builders,python,shared}`。
+  - 修复后（worktree 重跑 `analyze -f json -s ./src`，scope `bed525e7`）：`plugins/shared` 不在任何环中，指向 concrete 插件的出边为 0；保留的 `core/parser-runtime`、`types` 等边修复前即存在，无新增 `core/parser` 依赖。
+  - 残留（允许，非本任务范围）：`plugins/golang`(5)、`plugins/cpp`(3)、`plugins/kotlin`(2) 的插件内部环；`java`/`python` 已完全退出环。
+- `npm run type-check` PASS；既有 `plugin-construction-boundary` + 两个 `plugin-factory` 测试共 19 tests PASS。
+
 ## Touches
 
+- tests/unit/architecture/shared-plugin-boundary.test.ts
 - tasks/gap-break-plugin-shared-hub-cycle.md
 - src/plugins/plugin-factory.ts
 - src/plugins/shared/plugin-factory.ts
