@@ -17,17 +17,15 @@ vi.mock('fs-extra', () => ({
   },
 }));
 
-// Mock TestCoverageRenderer
+// Mock test coverage renderer
 vi.mock('@/mermaid/test-coverage-renderer.js', () => ({
-  TestCoverageRenderer: vi.fn().mockImplementation(() => ({
-    render: vi.fn().mockReturnValue('graph TD\n  A --> B'),
-  })),
+  renderTestCoverage: vi.fn().mockReturnValue('graph TD\n  A --> B'),
 }));
 
 // Import the module under test AFTER mocks are set up
 import { generateTestCoverageHeatmap } from '@/cli/processors/test-coverage-writer.js';
 import fs from 'fs-extra';
-import { TestCoverageRenderer } from '@/mermaid/test-coverage-renderer.js';
+import { renderTestCoverage } from '@/mermaid/test-coverage-renderer.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -84,22 +82,19 @@ describe('generateTestCoverageHeatmap', () => {
     // Re-apply default mock return values after clearAllMocks
     (fs.ensureDir as any).mockResolvedValue(undefined);
     (fs.writeFile as any).mockResolvedValue(undefined);
-    const RendererMock = TestCoverageRenderer as any;
-    RendererMock.mockImplementation(() => ({
-      render: vi.fn().mockReturnValue('graph TD\n  A --> B'),
-    }));
+    const RendererMock = renderTestCoverage as any;
+    RendererMock.mockReturnValue('graph TD\n  A --> B');
   });
 
-  it('calls TestCoverageRenderer.render with correct analysis and archJson args', async () => {
+  it('calls renderTestCoverage with correct analysis and archJson args', async () => {
     const analysis = makeAnalysis();
     const archJson = makeArchJson();
     const outputDir = '/out';
 
     await generateTestCoverageHeatmap(analysis, archJson, outputDir);
 
-    const instance = (TestCoverageRenderer as any).mock.results[0].value;
-    expect(instance.render).toHaveBeenCalledOnce();
-    expect(instance.render).toHaveBeenCalledWith(analysis, archJson);
+    expect(renderTestCoverage).toHaveBeenCalledOnce();
+    expect(renderTestCoverage).toHaveBeenCalledWith(analysis, archJson);
   });
 
   it('writes the file at <outputDir>/test/coverage-heatmap.md', async () => {
@@ -118,10 +113,7 @@ describe('generateTestCoverageHeatmap', () => {
     const archJson = makeArchJson();
     const mermaidCode = 'graph TD\n  A --> B';
 
-    const RendererMock = TestCoverageRenderer as any;
-    RendererMock.mockImplementation(() => ({
-      render: vi.fn().mockReturnValue(mermaidCode),
-    }));
+    (renderTestCoverage as any).mockReturnValue(mermaidCode);
 
     await generateTestCoverageHeatmap(analysis, archJson, '/out');
 
@@ -150,10 +142,7 @@ describe('generateTestCoverageHeatmap', () => {
     const analysis = makeAnalysis();
     const archJson = makeArchJson();
 
-    const RendererMock = TestCoverageRenderer as any;
-    RendererMock.mockImplementation(() => ({
-      render: vi.fn().mockReturnValue(''),
-    }));
+    (renderTestCoverage as any).mockReturnValue('');
 
     await expect(generateTestCoverageHeatmap(analysis, archJson, '/out')).resolves.toBeUndefined();
   });

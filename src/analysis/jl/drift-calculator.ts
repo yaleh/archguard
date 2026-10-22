@@ -61,107 +61,101 @@ function columnSum(matrix: number[][], col: number): number {
   return sum;
 }
 
-export class DriftCalculator {
-  /**
-   * Compare two in-memory snapshots and return a structured drift report.
-   *
-   * Only entities present in BOTH snapshots (E_shared) receive a drift score;
-   * added/removed entities are reported in `addedEntities` / `removedEntities`
-   * and excluded from scores. `summary` counts are computed over the full
-   * shared set; `drifts` honours `topK` / `minLevel` when provided.
-   *
-   * @param from - Earlier snapshot.
-   * @param to - Later snapshot.
-   * @param options - DriftOptions (uses topK/minLevel; threshold is a CLI-gate concern).
-   */
-  static compare(
-    from: DriftSnapshot,
-    to: DriftSnapshot,
-    options: Partial<DriftOptions> = {}
-  ): DriftReport {
-    const opts: DriftOptions = { ...DEFAULT_DRIFT_OPTIONS, ...options };
-    const alignment = EntityAligner.align(from.entityIndex, to.entityIndex);
-    const nUnion = alignment.entityIndex.length;
-    const mode = computeMode(nUnion, DEFAULT_JL_CONFIG);
-    const k = mode === 'jl' ? computeK(nUnion, DEFAULT_JL_CONFIG.epsilon) : null;
+/**
+ * Compare two in-memory snapshots and return a structured drift report.
+ *
+ * Only entities present in BOTH snapshots (E_shared) receive a drift score;
+ * added/removed entities are reported in `addedEntities` / `removedEntities`
+ * and excluded from scores. `summary` counts are computed over the full
+ * shared set; `drifts` honours `topK` / `minLevel` when provided.
+ *
+ * @param from - Earlier snapshot.
+ * @param to - Later snapshot.
+ * @param options - DriftOptions (uses topK/minLevel; threshold is a CLI-gate concern).
+ */
+export function compareDrift(
+  from: DriftSnapshot,
+  to: DriftSnapshot,
+  options: Partial<DriftOptions> = {}
+): DriftReport {
+  const opts: DriftOptions = { ...DEFAULT_DRIFT_OPTIONS, ...options };
+  const alignment = EntityAligner.align(from.entityIndex, to.entityIndex);
+  const nUnion = alignment.entityIndex.length;
+  const mode = computeMode(nUnion, DEFAULT_JL_CONFIG);
+  const k = mode === 'jl' ? computeK(nUnion, DEFAULT_JL_CONFIG.epsilon) : null;
 
-    // Express both snapshots' rows in the union coordinate system.
-    const alignedFrom = from.entityIndex.map((_, i) =>
-      EntityAligner.buildAlignedRow(
-        from.adjacencyRows[i] ?? [],
-        from.entityIndex,
-        alignment.entityIndex
-      )
-    );
-    const alignedTo = to.entityIndex.map((_, i) =>
-      EntityAligner.buildAlignedRow(
-        to.adjacencyRows[i] ?? [],
-        to.entityIndex,
-        alignment.entityIndex
-      )
-    );
+  // Express both snapshots' rows in the union coordinate system.
+  const alignedFrom = from.entityIndex.map((_, i) =>
+    EntityAligner.buildAlignedRow(
+      from.adjacencyRows[i] ?? [],
+      from.entityIndex,
+      alignment.entityIndex
+    )
+  );
+  const alignedTo = to.entityIndex.map((_, i) =>
+    EntityAligner.buildAlignedRow(to.adjacencyRows[i] ?? [], to.entityIndex, alignment.entityIndex)
+  );
 
-    let dataFrom = alignedFrom;
-    let dataTo = alignedTo;
-    if (mode === 'jl') {
-      // Drift-specific Achlioptas matrix: dimension depends on N_union, fixed
-      // seed for determinism (never reuses jl-state.json's matrix).
-      const achlioptas = buildAchlioptas(k, nUnion, DEFAULT_JL_CONFIG.seed);
-      dataFrom = project(alignedFrom, achlioptas, k);
-      dataTo = project(alignedTo, achlioptas, k);
-    }
-
-    const fromIndex = new Map<string, number>();
-    from.entityIndex.forEach((id, i) => fromIndex.set(id, i));
-    const toIndex = new Map<string, number>();
-    to.entityIndex.forEach((id, i) => toIndex.set(id, i));
-
-    const drifts: EntityDrift[] = [];
-    for (const entityId of alignment.shared) {
-      const fi = fromIndex.get(entityId);
-      const ti = toIndex.get(entityId);
-      if (fi === undefined || ti === undefined) continue;
-
-      const drift = l2(dataFrom[fi], dataTo[ti]);
-      const deltaFanOut = rowSum(to.adjacencyRows[ti] ?? []) - rowSum(from.adjacencyRows[fi] ?? []);
-      const deltaFanIn = columnSum(to.adjacencyRows, ti) - columnSum(from.adjacencyRows, fi);
-
-      drifts.push({
-        entityId,
-        drift,
-        level: classifyDrift(drift),
-        deltaFanIn,
-        deltaFanOut,
-        // TestCoverageMapper wiring is deferred (TASK-66); 0 is the honest default.
-        deltaCoverage: 0,
-      });
-    }
-
-    drifts.sort((a, b) => b.drift - a.drift);
-
-    const summary = { critical: 0, significant: 0, moderate: 0, stable: 0 };
-    for (const d of drifts) summary[d.level] += 1;
-
-    let filtered = drifts;
-    if (opts.minLevel !== undefined) {
-      const minRank = LEVEL_RANK[opts.minLevel];
-      filtered = filtered.filter((d) => LEVEL_RANK[d.level] >= minRank);
-    }
-    if (opts.topK !== undefined) {
-      filtered = filtered.slice(0, opts.topK);
-    }
-
-    return {
-      fromSnapshot: { timestamp: from.timestamp, commitSha: from.commitSha },
-      toSnapshot: { timestamp: to.timestamp, commitSha: to.commitSha },
-      mode,
-      nUnion,
-      k,
-      sharedEntityCount: alignment.shared.length,
-      addedEntities: alignment.added,
-      removedEntities: alignment.removed,
-      drifts: filtered,
-      summary,
-    };
+  let dataFrom = alignedFrom;
+  let dataTo = alignedTo;
+  if (mode === 'jl') {
+    // Drift-specific Achlioptas matrix: dimension depends on N_union, fixed
+    // seed for determinism (never reuses jl-state.json's matrix).
+    const achlioptas = buildAchlioptas(k, nUnion, DEFAULT_JL_CONFIG.seed);
+    dataFrom = project(alignedFrom, achlioptas, k);
+    dataTo = project(alignedTo, achlioptas, k);
   }
+
+  const fromIndex = new Map<string, number>();
+  from.entityIndex.forEach((id, i) => fromIndex.set(id, i));
+  const toIndex = new Map<string, number>();
+  to.entityIndex.forEach((id, i) => toIndex.set(id, i));
+
+  const drifts: EntityDrift[] = [];
+  for (const entityId of alignment.shared) {
+    const fi = fromIndex.get(entityId);
+    const ti = toIndex.get(entityId);
+    if (fi === undefined || ti === undefined) continue;
+
+    const drift = l2(dataFrom[fi], dataTo[ti]);
+    const deltaFanOut = rowSum(to.adjacencyRows[ti] ?? []) - rowSum(from.adjacencyRows[fi] ?? []);
+    const deltaFanIn = columnSum(to.adjacencyRows, ti) - columnSum(from.adjacencyRows, fi);
+
+    drifts.push({
+      entityId,
+      drift,
+      level: classifyDrift(drift),
+      deltaFanIn,
+      deltaFanOut,
+      // TestCoverageMapper wiring is deferred (TASK-66); 0 is the honest default.
+      deltaCoverage: 0,
+    });
+  }
+
+  drifts.sort((a, b) => b.drift - a.drift);
+
+  const summary = { critical: 0, significant: 0, moderate: 0, stable: 0 };
+  for (const d of drifts) summary[d.level] += 1;
+
+  let filtered = drifts;
+  if (opts.minLevel !== undefined) {
+    const minRank = LEVEL_RANK[opts.minLevel];
+    filtered = filtered.filter((d) => LEVEL_RANK[d.level] >= minRank);
+  }
+  if (opts.topK !== undefined) {
+    filtered = filtered.slice(0, opts.topK);
+  }
+
+  return {
+    fromSnapshot: { timestamp: from.timestamp, commitSha: from.commitSha },
+    toSnapshot: { timestamp: to.timestamp, commitSha: to.commitSha },
+    mode,
+    nUnion,
+    k,
+    sharedEntityCount: alignment.shared.length,
+    addedEntities: alignment.added,
+    removedEntities: alignment.removed,
+    drifts: filtered,
+    summary,
+  };
 }

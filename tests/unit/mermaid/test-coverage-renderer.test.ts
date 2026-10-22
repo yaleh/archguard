@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TestCoverageRenderer } from '@/mermaid/test-coverage-renderer.js';
+import { renderTestCoverage } from '@/mermaid/test-coverage-renderer.js';
 import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 import type { ArchJSON } from '@/types/index.js';
 
@@ -28,13 +28,13 @@ function makeArchJson(entities: any[] = []): ArchJSON {
 
 describe('TestCoverageRenderer', () => {
   it('generates a valid Mermaid graph TD diagram', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     const result = renderer.render(makeAnalysis(), makeArchJson());
     expect(result).toContain('graph TD');
   });
 
   it('places entity with score >= 0.7 in "Well Tested" bucket', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     const analysis = makeAnalysis({
       coverageMap: [
         { sourceEntityId: 'entity-1', coveredByTestIds: ['foo.test.ts'], coverageScore: 0.85 },
@@ -49,7 +49,7 @@ describe('TestCoverageRenderer', () => {
   });
 
   it('places entity with score 0.3-0.7 in "Partially Tested" bucket', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     const analysis = makeAnalysis({
       coverageMap: [
         { sourceEntityId: 'entity-1', coveredByTestIds: ['foo.test.ts'], coverageScore: 0.5 },
@@ -64,7 +64,7 @@ describe('TestCoverageRenderer', () => {
   });
 
   it('places entity with score < 0.3 in "Not Tested" bucket', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     const analysis = makeAnalysis({ coverageMap: [] });
     const archJson = makeArchJson([
       { id: 'entity-1', name: 'BazService', type: 'class', sourceLocation: { file: 'src/baz.ts' } },
@@ -75,7 +75,7 @@ describe('TestCoverageRenderer', () => {
   });
 
   it('shows "Debug Only" bucket when debug test files exist', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     const analysis = makeAnalysis({
       testFiles: [
         {
@@ -97,7 +97,7 @@ describe('TestCoverageRenderer', () => {
   });
 
   it('truncates oversized buckets with "+N more" label', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     // Create 25 entities all with score 0 (Not Tested) — bucket limit is 20
     const entities = Array.from({ length: 25 }, (_, i) => ({
       id: `entity-${i}`,
@@ -110,7 +110,7 @@ describe('TestCoverageRenderer', () => {
   });
 
   it('only includes class and interface entities', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     const archJson = makeArchJson([
       { id: 'e1', name: 'MyClass', type: 'class', sourceLocation: { file: 'src/a.ts' } },
       { id: 'e2', name: 'myFunction', type: 'function', sourceLocation: { file: 'src/b.ts' } },
@@ -123,7 +123,7 @@ describe('TestCoverageRenderer', () => {
   });
 
   it('does not show Debug Only bucket when no debug test files exist', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     const analysis = makeAnalysis({
       testFiles: [
         {
@@ -144,7 +144,7 @@ describe('TestCoverageRenderer', () => {
   });
 
   it('handles exact boundary score of 0.7 as "Well Tested"', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     const analysis = makeAnalysis({
       coverageMap: [{ sourceEntityId: 'e1', coveredByTestIds: ['t.test.ts'], coverageScore: 0.7 }],
     });
@@ -157,7 +157,7 @@ describe('TestCoverageRenderer', () => {
   });
 
   it('handles exact boundary score of 0.3 as "Partially Tested"', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     const analysis = makeAnalysis({
       coverageMap: [{ sourceEntityId: 'e1', coveredByTestIds: ['t.test.ts'], coverageScore: 0.3 }],
     });
@@ -170,7 +170,7 @@ describe('TestCoverageRenderer', () => {
   });
 
   it('truncates long entity names to 30 chars', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     const longName = 'AVeryLongServiceNameThatExceedsThirtyChars';
     const archJson = makeArchJson([
       { id: 'e1', name: longName, type: 'class', sourceLocation: { file: 'src/long.ts' } },
@@ -183,7 +183,7 @@ describe('TestCoverageRenderer', () => {
   });
 
   it('generates distinct node IDs for labels differing only in non-alphanumeric characters', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     const archJson = makeArchJson([
       { id: 'e1', name: 'Hello-World', type: 'class', sourceLocation: { file: 'src/a.ts' } },
       { id: 'e2', name: 'Hello_World', type: 'class', sourceLocation: { file: 'src/b.ts' } },
@@ -204,7 +204,7 @@ describe('TestCoverageRenderer', () => {
   });
 
   it('generates distinct node IDs for truncated labels that differ only beyond the truncation point', () => {
-    const renderer = new TestCoverageRenderer();
+    const renderer = { render: renderTestCoverage };
     // Two entities with names that share the first 29 chars — truncation makes them identical
     const nameA = 'VeryLongServiceNameThatIsExtendedWithA';
     const nameB = 'VeryLongServiceNameThatIsExtendedWithB';

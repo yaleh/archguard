@@ -51,9 +51,7 @@ vi.mock('@/cli/cache/diagram-manifest.js', () => ({
 }));
 
 vi.mock('@/cli/metrics-history-writer.js', () => ({
-  MetricsHistoryWriter: class {
-    append = metricsAppendMock;
-  },
+  appendMetricsHistory: metricsAppendMock,
 }));
 
 vi.mock('@/cli/query/query-artifacts.js', () => ({
@@ -80,9 +78,7 @@ vi.mock('@/analysis/test-analyzer.js', () => ({
 }));
 
 vi.mock('@/cli/utils/test-output-writer.js', () => ({
-  TestOutputWriter: class {
-    write = testOutputWriterWriteMock;
-  },
+  writeTestOutput: testOutputWriterWriteMock,
 }));
 
 vi.mock('@/cli/git-history/git-log-reader.js', () => ({

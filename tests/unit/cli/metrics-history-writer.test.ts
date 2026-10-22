@@ -12,7 +12,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
-import { MetricsHistoryWriter } from '@/cli/metrics-history-writer.js';
+import { appendMetricsHistory } from '@/cli/metrics-history-writer.js';
 import type { PackageMetricsSnapshot } from '@/cli/metrics-history-writer.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ describe('MetricsHistoryWriter', () => {
   });
 
   it('creates the file if it does not exist and writes the first JSONL line', async () => {
-    const writer = new MetricsHistoryWriter();
+    const writer = { append: appendMetricsHistory };
     const packages = [makePackageSnapshot('pkgA'), makePackageSnapshot('pkgB')];
 
     await writer.append(packages, tmpDir);
@@ -55,7 +55,7 @@ describe('MetricsHistoryWriter', () => {
   });
 
   it('appends new lines to an existing file without overwriting', async () => {
-    const writer = new MetricsHistoryWriter();
+    const writer = { append: appendMetricsHistory };
     const packages = [makePackageSnapshot('pkgA')];
 
     // Write twice
@@ -69,7 +69,7 @@ describe('MetricsHistoryWriter', () => {
   });
 
   it('each line is valid JSON containing timestamp and packages array', async () => {
-    const writer = new MetricsHistoryWriter();
+    const writer = { append: appendMetricsHistory };
     const packages = [makePackageSnapshot('pkgA')];
 
     await writer.append(packages, tmpDir);
@@ -86,7 +86,7 @@ describe('MetricsHistoryWriter', () => {
   });
 
   it('packages array each item contains name, fanIn, fanOut, cycleCount', async () => {
-    const writer = new MetricsHistoryWriter();
+    const writer = { append: appendMetricsHistory };
     const packages = [
       { name: 'pkgA', fanIn: 1, fanOut: 2, cycleCount: 0, entityCount: 4 },
       { name: 'pkgB', fanIn: 3, fanOut: 1, cycleCount: 1, entityCount: 7 },
@@ -108,7 +108,7 @@ describe('MetricsHistoryWriter', () => {
   });
 
   it('preserves previously written lines when appending', async () => {
-    const writer = new MetricsHistoryWriter();
+    const writer = { append: appendMetricsHistory };
 
     await writer.append(
       [{ name: 'pkgA', fanIn: 1, fanOut: 2, cycleCount: 0, entityCount: 3 }],
@@ -132,7 +132,7 @@ describe('MetricsHistoryWriter', () => {
   });
 
   it('writes the file to outputDir/metrics-history.jsonl', async () => {
-    const writer = new MetricsHistoryWriter();
+    const writer = { append: appendMetricsHistory };
     await writer.append([makePackageSnapshot('pkg1')], tmpDir);
 
     const expectedPath = path.join(tmpDir, 'metrics-history.jsonl');
@@ -140,7 +140,7 @@ describe('MetricsHistoryWriter', () => {
   });
 
   it('records scopeKey and sources on the entry when provided', async () => {
-    const writer = new MetricsHistoryWriter();
+    const writer = { append: appendMetricsHistory };
     const wrote = await writer.append([makePackageSnapshot('pkgA')], tmpDir, {
       scopeKey: 'abcd1234',
       sources: ['/tmp/project/src'],
@@ -154,7 +154,7 @@ describe('MetricsHistoryWriter', () => {
   });
 
   it('omits scopeKey and sources when no scope is given', async () => {
-    const writer = new MetricsHistoryWriter();
+    const writer = { append: appendMetricsHistory };
     await writer.append([makePackageSnapshot('pkgA')], tmpDir);
 
     const content = await fs.readFile(path.join(tmpDir, 'metrics-history.jsonl'), 'utf-8');
@@ -164,7 +164,7 @@ describe('MetricsHistoryWriter', () => {
   });
 
   it('does not write anything when packages is empty', async () => {
-    const writer = new MetricsHistoryWriter();
+    const writer = { append: appendMetricsHistory };
     const wrote = await writer.append([], tmpDir, { scopeKey: 'abcd1234' });
 
     expect(wrote).toBe(false);
@@ -172,7 +172,7 @@ describe('MetricsHistoryWriter', () => {
   });
 
   it('does not add a line to an existing file when packages is empty', async () => {
-    const writer = new MetricsHistoryWriter();
+    const writer = { append: appendMetricsHistory };
     await writer.append([makePackageSnapshot('pkgA')], tmpDir);
     await writer.append([], tmpDir);
 

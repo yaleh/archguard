@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { DriftCalculator, classifyDrift } from '@/analysis/jl/drift-calculator.js';
+import { compareDrift, classifyDrift } from '@/analysis/jl/drift-calculator.js';
 import { computeK } from '@/analysis/jl/jl-projector.js';
 import { DRIFT_THRESHOLDS, DEFAULT_JL_CONFIG } from '@/analysis/jl/types.js';
 import type { DriftSnapshot } from '@/analysis/jl/types.js';
@@ -65,7 +65,7 @@ describe('DriftCalculator.compare', () => {
       ],
       't2'
     );
-    const report = DriftCalculator.compare(from, to);
+    const report = compareDrift(from, to);
     expect(report.drifts).toHaveLength(3);
     for (const d of report.drifts) {
       expect(d.drift).toBe(0);
@@ -80,7 +80,7 @@ describe('DriftCalculator.compare', () => {
     toRows[0] = [0, 1, 1, 1, 1, 1];
     const to = makeSnapshot(['A', 'B', 'C', 'D', 'E', 'F'], toRows, 't2');
 
-    const report = DriftCalculator.compare(from, to);
+    const report = compareDrift(from, to);
     const a = report.drifts.find((d) => d.entityId === 'A');
     expect(a).toBeDefined();
     expect(a.drift).toBeCloseTo(Math.sqrt(5), 3);
@@ -91,7 +91,7 @@ describe('DriftCalculator.compare', () => {
   it('added/removed entities are excluded from drifts but reported', () => {
     const from = makeSnapshot(['A', 'B'], zeroMatrix(2), 't1');
     const to = makeSnapshot(['B', 'C'], zeroMatrix(2), 't2');
-    const report = DriftCalculator.compare(from, to);
+    const report = compareDrift(from, to);
     expect(report.drifts.map((d) => d.entityId)).toEqual(['B']);
     expect(report.addedEntities).toEqual(['C']);
     expect(report.removedEntities).toEqual(['A']);
@@ -120,7 +120,7 @@ describe('DriftCalculator.compare', () => {
       ],
       't2'
     );
-    const report = DriftCalculator.compare(from, to);
+    const report = compareDrift(from, to);
     const a = report.drifts.find((d) => d.entityId === 'A');
     // A's own row is unchanged → drift 0.
     expect(a.drift).toBe(0);
@@ -137,7 +137,7 @@ describe('DriftCalculator.compare', () => {
     const from = makeNSnapshot(n, 't1');
     const to = makeSnapshot(['E0', 'E1', 'E2', 'E3', 'E4'], toRows, 't2');
 
-    const report = DriftCalculator.compare(from, to);
+    const report = compareDrift(from, to);
     for (let i = 1; i < report.drifts.length; i++) {
       expect(report.drifts[i].drift).toBeLessThanOrEqual(report.drifts[i - 1].drift);
     }
@@ -147,7 +147,7 @@ describe('DriftCalculator.compare', () => {
   it('uses DIRECT mode for N_union < 1000', () => {
     const from = makeNSnapshot(999, 't1');
     const to = makeNSnapshot(999, 't2');
-    const report = DriftCalculator.compare(from, to);
+    const report = compareDrift(from, to);
     expect(report.mode).toBe('direct');
     expect(report.k).toBeNull();
     expect(report.nUnion).toBe(999);
@@ -156,7 +156,7 @@ describe('DriftCalculator.compare', () => {
   it('uses JL mode for N_union ≥ 1000 with k = ⌈4·ln(N)/0.09⌉', () => {
     const from = makeNSnapshot(1000, 't1');
     const to = makeNSnapshot(1000, 't2');
-    const report = DriftCalculator.compare(from, to);
+    const report = compareDrift(from, to);
     expect(report.mode).toBe('jl');
     expect(report.k).toBe(computeK(1000, DEFAULT_JL_CONFIG.epsilon));
     expect(report.k).toBe(308);
@@ -165,8 +165,8 @@ describe('DriftCalculator.compare', () => {
   it('JL projection is deterministic for the same inputs', () => {
     const from = makeNSnapshot(1000, 't1');
     const to = makeNSnapshot(1000, 't2');
-    const report1 = DriftCalculator.compare(from, to);
-    const report2 = DriftCalculator.compare(from, to);
+    const report1 = compareDrift(from, to);
+    const report2 = compareDrift(from, to);
     expect(report1).toEqual(report2);
   });
 
@@ -182,7 +182,7 @@ describe('DriftCalculator.compare', () => {
       't2'
     );
 
-    const report = DriftCalculator.compare(from, to, { topK: 3, minLevel: 'moderate' });
+    const report = compareDrift(from, to, { topK: 3, minLevel: 'moderate' });
     expect(report.drifts).toHaveLength(3);
     // All filtered drifts are ≥ moderate.
     for (const d of report.drifts) {
@@ -202,7 +202,7 @@ describe('DriftCalculator.compare', () => {
       't2'
     );
 
-    const report = DriftCalculator.compare(from, to, { topK: 3 });
+    const report = compareDrift(from, to, { topK: 3 });
     // drifts sliced to 3, but summary reflects all 12 shared entities.
     expect(report.drifts).toHaveLength(3);
     expect(

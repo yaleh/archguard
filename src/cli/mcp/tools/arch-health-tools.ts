@@ -13,7 +13,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import path from 'path';
 import { resolveRoot } from '../mcp-server.js';
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
-import { DriftCalculator } from '@/analysis/jl/drift-calculator.js';
+import { compareDrift } from '@/analysis/jl/drift-calculator.js';
 import { ClusterBoundaryAnalyzer } from '@/analysis/jl/cluster-boundary-analyzer.js';
 import { buildAdjacencyMatrix } from '@/analysis/jl/adjacency-builder.js';
 import {
@@ -272,7 +272,7 @@ export function registerArchHealthDriftTool(server: McpServer, defaultRoot: stri
           if (resolvedByRef.kind === 'not-evaluated') {
             return textResponse(JSON.stringify(resolvedByRef.notEvaluated, null, 2));
           }
-          const report = DriftCalculator.compare(resolvedByRef.from, resolvedByRef.to, {
+          const report = compareDrift(resolvedByRef.from, resolvedByRef.to, {
             threshold: DRIFT_THRESHOLDS.critical,
             topK: topK ?? 10,
             minLevel: (minLevel as DriftLevel | undefined) ?? 'stable',
@@ -326,7 +326,7 @@ export function registerArchHealthDriftTool(server: McpServer, defaultRoot: stri
           );
         }
 
-        const report = DriftCalculator.compare(resolved.from, resolved.to, {
+        const report = compareDrift(resolved.from, resolved.to, {
           threshold: DRIFT_THRESHOLDS.critical,
           topK: topK ?? 10,
           minLevel: (minLevel as DriftLevel | undefined) ?? 'stable',

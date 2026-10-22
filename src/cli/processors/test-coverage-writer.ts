@@ -6,7 +6,7 @@
  * @module cli/processors/test-coverage-writer
  */
 
-import { TestCoverageRenderer } from '@/mermaid/test-coverage-renderer.js';
+import { renderTestCoverage } from '@/mermaid/test-coverage-renderer.js';
 import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 import type { ArchJSON } from '@/types/index.js';
 import fs from 'fs-extra';
@@ -28,8 +28,7 @@ export async function generateTestCoverageHeatmap(
   archJson: ArchJSON,
   outputDir: string
 ): Promise<void> {
-  const renderer = new TestCoverageRenderer();
-  const mermaidCode = renderer.render(analysis, archJson);
+  const mermaidCode = renderTestCoverage(analysis, archJson);
 
   const heatmapDir = path.join(outputDir, 'test');
   await fs.ensureDir(heatmapDir);

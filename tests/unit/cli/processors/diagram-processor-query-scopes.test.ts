@@ -171,7 +171,7 @@ const createGoAtlasArchJSON = (): ArchJSON => ({
 describe('DiagramProcessor query scope collection', () => {
   let FileDiscoveryService: any;
   let ParallelParser: any;
-  let ArchJSONAggregator: any;
+  let aggregateArchJSON: any;
   let OutputPathResolver: any;
   let MermaidDiagramGenerator: any;
   let progress: ProgressReporter;
@@ -179,7 +179,7 @@ describe('DiagramProcessor query scope collection', () => {
   beforeEach(async () => {
     ({ FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js'));
     ({ ParallelParser } = await import('@/parser/parallel-parser.js'));
-    ({ ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js'));
+    ({ aggregateArchJSON } = await import('@/parser/archjson-aggregator.js'));
     ({ OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js'));
     ({ MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js'));
     progress = new ProgressReporter();
@@ -196,9 +196,7 @@ describe('DiagramProcessor query scope collection', () => {
     ParallelParser.mockImplementation(() => ({
       parseFiles: vi.fn().mockResolvedValue(archJson),
     }));
-    ArchJSONAggregator.mockImplementation((json: any) => ({
-      aggregate: vi.fn().mockImplementation(() => json),
-    }));
+    aggregateArchJSON.mockImplementation((json: any) => json);
     OutputPathResolver.mockImplementation(() => ({
       resolve: vi.fn().mockReturnValue({
         outputDir: './archguard',

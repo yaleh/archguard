@@ -29,7 +29,7 @@ import {
 } from '../mcp/tools/atlas-analytics-tools.js';
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
 import { TREND_DELTA_THRESHOLD, DRIFT_THRESHOLDS } from '@/analysis/jl/types.js';
-import { DriftCalculator } from '@/analysis/jl/drift-calculator.js';
+import { compareDrift } from '@/analysis/jl/drift-calculator.js';
 import { reanalyzeCommitSnapshot, resolveDriftSnapshots } from '../analyze/drift-baseline.js';
 import { formatDriftReport } from '../utils/drift-reporter.js';
 import { loadArchJsonForCluster } from '../utils/cluster-archjson-loader.js';
@@ -858,7 +858,7 @@ async function handleArchitectureDrift(opts: QueryOptions): Promise<void> {
     return;
   }
 
-  const report = DriftCalculator.compare(resolved.from, resolved.to, {
+  const report = compareDrift(resolved.from, resolved.to, {
     threshold: DRIFT_THRESHOLDS.critical,
     topK: 10,
     minLevel: 'stable',

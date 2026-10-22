@@ -4,7 +4,20 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MermaidValidationPipeline } from '../../../src/mermaid/validation-pipeline';
+import { validateStructure } from '../../../src/mermaid/validator-structural';
+import { validateQuality } from '../../../src/mermaid/validator-quality';
 import type { ArchJSON } from '../../../src/types';
+
+// Wrap the module-level validators in spies whose default implementation is the
+// real function, so tests can override a single call without losing real behaviour.
+vi.mock('../../../src/mermaid/validator-structural', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/mermaid/validator-structural')>();
+  return { ...actual, validateStructure: vi.fn(actual.validateStructure) };
+});
+vi.mock('../../../src/mermaid/validator-quality', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/mermaid/validator-quality')>();
+  return { ...actual, validateQuality: vi.fn(actual.validateQuality) };
+});
 
 describe('MermaidValidationPipeline', () => {
   let pipeline: MermaidValidationPipeline;
@@ -209,18 +222,20 @@ describe('MermaidValidationPipeline', () => {
         validate: vi.fn().mockResolvedValue({ valid: true, errors: [], warnings: [] }),
       });
 
-      const structuralSpy = vi
-        .spyOn(pipeline as any, 'structuralValidator', 'get')
-        .mockReturnValue({
-          validate: vi.fn().mockReturnValue({ valid: true, issues: [] }),
-        });
+      const structuralSpy = vi.mocked(validateStructure).mockReturnValueOnce({
+        valid: true,
+        issues: [],
+      });
 
       const renderSpy = vi.spyOn(pipeline as any, 'renderValidator', 'get').mockReturnValue({
         validate: vi.fn().mockReturnValue({ valid: true, canRender: true, issues: [] }),
       });
 
-      const qualitySpy = vi.spyOn(pipeline as any, 'qualityValidator', 'get').mockReturnValue({
-        validate: vi.fn().mockReturnValue({ valid: true, score: 85, metrics: {}, suggestions: [] }),
+      const qualitySpy = vi.mocked(validateQuality).mockReturnValueOnce({
+        valid: true,
+        score: 85,
+        metrics: {} as any,
+        suggestions: [],
       });
 
       await pipeline.validate(mermaidCode, archJson);
@@ -233,9 +248,7 @@ describe('MermaidValidationPipeline', () => {
 
       // Cleanup
       parseSpy.mockRestore();
-      structuralSpy.mockRestore();
       renderSpy.mockRestore();
-      qualitySpy.mockRestore();
     });
   });
 

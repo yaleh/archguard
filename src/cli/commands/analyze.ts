@@ -25,7 +25,7 @@ import { runArchHealth, printArchHealth } from '../analyze/arch-health.js';
 import { loadSnapshots, resolveCommitSha } from '@/analysis/snapshot-store.js';
 import { computeDirectionHint } from '@/analysis/gim/direction-hint.js';
 import { readHistoryFile } from '@/analysis/jl/history-writer.js';
-import { DriftCalculator } from '@/analysis/jl/drift-calculator.js';
+import { compareDrift } from '@/analysis/jl/drift-calculator.js';
 import { determineDriftExitCode } from '@/analysis/jl/drift-exit-code.js';
 import { resolveBaselineSnapshot, snapshotFromArchJson } from '../analyze/drift-baseline.js';
 import type { BaselineResolution } from '../analyze/drift-baseline.js';
@@ -398,7 +398,7 @@ export async function runDriftCheck(
     return { exitCode: 2, message: `invalid drift-base commit: ${resolution.commit}` };
   }
 
-  const report = DriftCalculator.compare(resolution.snapshot, currentSnapshot, {
+  const report = compareDrift(resolution.snapshot, currentSnapshot, {
     threshold: options.threshold,
   });
   const exitCode = determineDriftExitCode(report, options.threshold);

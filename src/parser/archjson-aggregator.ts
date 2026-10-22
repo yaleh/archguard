@@ -20,302 +20,293 @@ import type { DetailLevel } from '@/types/config.js';
  * This is the core innovation of v2.0 - allowing users to control
  * the level of detail in generated diagrams.
  */
-export class ArchJSONAggregator {
-  /**
-   * Aggregate ArchJSON to specified detail level
-   *
-   * @param archJSON - The full ArchJSON to aggregate
-   * @param level - Target detail level
-   * @returns Aggregated ArchJSON
-   */
-  aggregate(archJSON: ArchJSON, level: DetailLevel): ArchJSON {
-    switch (level) {
-      case 'method':
-        // Return original - no filtering needed
-        return archJSON;
+export function aggregateArchJSON(archJSON: ArchJSON, level: DetailLevel): ArchJSON {
+  switch (level) {
+    case 'method':
+      // Return original - no filtering needed
+      return archJSON;
 
-      case 'class':
-        return this.aggregateToClassLevel(archJSON);
+    case 'class':
+      return aggregateToClassLevel(archJSON);
 
-      case 'package':
-        return this.aggregateToPackageLevel(archJSON);
+    case 'package':
+      return aggregateToPackageLevel(archJSON);
 
-      default:
-        throw new Error(`Unknown detail level: ${String(level)}`);
-    }
+    default:
+      throw new Error(`Unknown detail level: ${String(level)}`);
   }
+}
 
-  /**
-   * Aggregate to class level - keep only public members
-   *
-   * @param archJSON - Full ArchJSON
-   * @returns ArchJSON with only public members
-   */
-  private aggregateToClassLevel(archJSON: ArchJSON): ArchJSON {
-    return {
-      ...archJSON,
-      entities: archJSON.entities.map((entity) => ({
-        ...entity,
-        members: entity.members.filter(
-          (member) => member.visibility === 'public' || member.visibility === undefined
-        ),
-      })),
-    };
-  }
+/**
+ * Aggregate to class level - keep only public members
+ *
+ * @param archJSON - Full ArchJSON
+ * @returns ArchJSON with only public members
+ */
+export function aggregateToClassLevel(archJSON: ArchJSON): ArchJSON {
+  return {
+    ...archJSON,
+    entities: archJSON.entities.map((entity) => ({
+      ...entity,
+      members: entity.members.filter(
+        (member) => member.visibility === 'public' || member.visibility === undefined
+      ),
+    })),
+  };
+}
 
-  /**
-   * Aggregate to package level - show only packages
-   *
-   * @param archJSON - Full ArchJSON
-   * @returns ArchJSON with package-level entities and relations
-   */
-  private aggregateToPackageLevel(archJSON: ArchJSON): ArchJSON {
-    const { workspaceRoot } = archJSON;
-    const packages = this.extractPackages(archJSON.entities, workspaceRoot, archJSON.language);
-    const packageRelations = this.analyzePackageDependencies(
-      archJSON.entities,
-      archJSON.relations,
-      workspaceRoot,
-      archJSON.language
+/**
+ * Aggregate to package level - show only packages
+ *
+ * @param archJSON - Full ArchJSON
+ * @returns ArchJSON with package-level entities and relations
+ */
+export function aggregateToPackageLevel(archJSON: ArchJSON): ArchJSON {
+  const { workspaceRoot } = archJSON;
+  const packages = extractPackages(archJSON.entities, workspaceRoot, archJSON.language);
+  const packageRelations = analyzePackageDependencies(
+    archJSON.entities,
+    archJSON.relations,
+    workspaceRoot,
+    archJSON.language
+  );
+
+  // Create package entities
+  const packageEntities: Entity[] = packages.map((pkg) => {
+    const firstEntityInPackage = archJSON.entities.find(
+      (e) => extractPackageFromEntity(e, workspaceRoot, archJSON.language) === pkg
     );
 
-    // Create package entities
-    const packageEntities: Entity[] = packages.map((pkg) => {
-      const firstEntityInPackage = archJSON.entities.find(
-        (e) => this.extractPackageFromEntity(e, workspaceRoot, archJSON.language) === pkg
-      );
-
-      return {
-        id: pkg,
-        name: pkg,
-        type: 'package',
-        visibility: 'public' as const,
-        members: [],
-        sourceLocation: firstEntityInPackage
-          ? firstEntityInPackage.sourceLocation
-          : { file: '', startLine: 0, endLine: 0 },
-      };
-    });
-
     return {
-      ...archJSON,
-      entities: packageEntities,
-      relations: packageRelations,
+      id: pkg,
+      name: pkg,
+      type: 'package',
+      visibility: 'public' as const,
+      members: [],
+      sourceLocation: firstEntityInPackage
+        ? firstEntityInPackage.sourceLocation
+        : { file: '', startLine: 0, endLine: 0 },
     };
+  });
+
+  return {
+    ...archJSON,
+    entities: packageEntities,
+    relations: packageRelations,
+  };
+}
+
+/**
+ * Extract unique package names from entities
+ *
+ * Package name is extracted from the file path's directory after '/src/'.
+ * Example: "/path/to/src/parser/file.ts" -> "parser"
+ * Example: "/path/to/src/cli/commands/analyze.ts" -> "cli"
+ *
+ * @param entities - Array of entities
+ * @returns Array of unique package names
+ */
+export function extractPackages(
+  entities: readonly Entity[],
+  workspaceRoot?: string,
+  language?: ArchJSON['language']
+): string[] {
+  const packages = new Set<string>();
+
+  for (const entity of entities) {
+    const packageName = extractPackageFromEntity(entity, workspaceRoot, language);
+    packages.add(packageName);
   }
 
-  /**
-   * Extract unique package names from entities
-   *
-   * Package name is extracted from the file path's directory after '/src/'.
-   * Example: "/path/to/src/parser/file.ts" -> "parser"
-   * Example: "/path/to/src/cli/commands/analyze.ts" -> "cli"
-   *
-   * @param entities - Array of entities
-   * @returns Array of unique package names
-   */
-  private extractPackages(
-    entities: readonly Entity[],
-    workspaceRoot?: string,
-    language?: ArchJSON['language']
-  ): string[] {
-    const packages = new Set<string>();
+  return Array.from(packages)
+    .filter((pkg) => pkg !== '')
+    .sort();
+}
 
-    for (const entity of entities) {
-      const packageName = this.extractPackageFromEntity(entity, workspaceRoot, language);
-      packages.add(packageName);
-    }
-
-    return Array.from(packages)
-      .filter((pkg) => pkg !== '')
-      .sort();
+/**
+ * Extract package name from file path
+ *
+ * Supports both absolute and relative paths:
+ * - Absolute: "/path/to/src/parser/file.ts" -> "parser"
+ * - Relative with src: "src/parser/file.ts" -> "parser"
+ * - Relative without src: "parser/file.ts" -> "parser"
+ *
+ * @param filePath - File path to extract package from
+ * @returns Package name or empty string if not found
+ */
+function extractPackageFromFile(
+  filePath: string,
+  workspaceRoot?: string,
+  language?: ArchJSON['language']
+): string {
+  const directJavaModule = extractJavaMavenModule(filePath.replace(/\\/g, '/'), language);
+  if (directJavaModule) {
+    return directJavaModule;
   }
 
-  /**
-   * Extract package name from file path
-   *
-   * Supports both absolute and relative paths:
-   * - Absolute: "/path/to/src/parser/file.ts" -> "parser"
-   * - Relative with src: "src/parser/file.ts" -> "parser"
-   * - Relative without src: "parser/file.ts" -> "parser"
-   *
-   * @param filePath - File path to extract package from
-   * @returns Package name or empty string if not found
-   */
-  private extractPackageFromFile(
-    filePath: string,
-    workspaceRoot?: string,
-    language?: ArchJSON['language']
-  ): string {
-    const directJavaModule = this.extractJavaMavenModule(filePath.replace(/\\/g, '/'), language);
-    if (directJavaModule) {
-      return directJavaModule;
+  // When workspaceRoot provided and file is absolute, use parent directory path
+  if (workspaceRoot && path.isAbsolute(filePath)) {
+    const rel = path.relative(workspaceRoot, filePath).replace(/\\/g, '/');
+    const javaModule = extractJavaMavenModule(rel, language);
+    if (javaModule) {
+      return javaModule;
     }
+    const parts = rel.split('/');
+    if (parts.length <= 1) return ''; // file directly in workspaceRoot
+    // Return parent directory path (all components except the filename)
+    return parts.slice(0, -1).join('/');
+  }
 
-    // When workspaceRoot provided and file is absolute, use parent directory path
-    if (workspaceRoot && path.isAbsolute(filePath)) {
-      const rel = path.relative(workspaceRoot, filePath).replace(/\\/g, '/');
-      const javaModule = this.extractJavaMavenModule(rel, language);
-      if (javaModule) {
-        return javaModule;
+  // Normalize path separators to forward slashes
+  const normalizedPath = filePath.replace(/\\/g, '/');
+
+  // Try to find '/src/' or 'src/' at the beginning
+  let afterSrc: string;
+  const srcIndex = normalizedPath.indexOf('/src/');
+  if (srcIndex !== -1) {
+    // Found '/src/' - extract everything after it
+    afterSrc = normalizedPath.substring(srcIndex + 5); // 5 = length of '/src/'
+  } else if (normalizedPath.startsWith('src/')) {
+    // Path starts with 'src/' - extract everything after 'src/'
+    afterSrc = normalizedPath.substring(4); // 4 = length of 'src/'
+  } else {
+    // No 'src/' prefix - use the whole path (for relative paths like 'parser/file.ts')
+    afterSrc = normalizedPath;
+  }
+
+  // Find the first slash to get the first directory
+  const firstSlashIndex = afterSrc.indexOf('/');
+  if (firstSlashIndex === -1) {
+    // No subdirectory - file is directly in the directory
+    return '';
+  }
+
+  return afterSrc.substring(0, firstSlashIndex);
+}
+
+/**
+ * For Kotlin, derive the logical package name directly from the entity ID.
+ * Entity IDs are always `com.example.pkg.ClassName` — strip the last component.
+ * Falls back to file-path extraction for all other languages.
+ */
+function extractPackageFromEntity(
+  entity: Entity,
+  workspaceRoot?: string,
+  language?: ArchJSON['language']
+): string {
+  if (language === 'kotlin') {
+    const lastDot = entity.id.lastIndexOf('.');
+    return lastDot > 0 ? entity.id.slice(0, lastDot) : '';
+  }
+  return extractPackageFromFile(entity.sourceLocation.file, workspaceRoot, language);
+}
+
+function extractJavaMavenModule(
+  relativePath: string,
+  language?: ArchJSON['language']
+): string | null {
+  if (language !== 'java') {
+    return null;
+  }
+
+  const normalized = relativePath.replace(/\\/g, '/');
+  const match =
+    normalized.match(/^([^/]+)\/src\/(?:main|test)\/java\//) ??
+    normalized.match(/\/([^/]+)\/src\/(?:main|test)\/java\//);
+  if (!match) return null;
+  const moduleName = match[1];
+  // Skip Multi-Release JAR version directories (java9, java11, java17, java21, etc.)
+  // and META-INF, which are not Maven module names
+  if (/^java\d+$/.test(moduleName) || moduleName === 'META-INF') {
+    return null;
+  }
+  return moduleName;
+}
+
+/**
+ * Analyze package-level dependencies from class-level relations
+ *
+ * Maps class relations to package relations and deduplicates them.
+ * Filters out self-relations within the same package.
+ *
+ * @param entities - Array of entities
+ * @param relations - Array of class-level relations
+ * @returns Array of package-level relations
+ */
+export function analyzePackageDependencies(
+  entities: readonly Entity[],
+  relations: readonly Relation[],
+  workspaceRoot?: string,
+  language?: ArchJSON['language']
+): Relation[] {
+  // Create entity ID to package mapping
+  const entityToPackage = new Map<string, string>();
+  for (const entity of entities) {
+    const packageName = extractPackageFromEntity(entity, workspaceRoot, language);
+    entityToPackage.set(entity.id, packageName);
+  }
+
+  // Build module-level fallback map for Python (and other languages where relations
+  // use module IDs instead of class IDs as source/target).
+  //
+  // For each entity ID like 'pytorch.engine.Engine' in package 'pytorch':
+  //   strip last component → 'pytorch.engine' → maps to 'pytorch'
+  // This allows relations with source 'pytorch.engine' (module-level) to resolve
+  // to package 'pytorch' even though 'pytorch.engine' is not an entity ID.
+  const moduleToPackage = new Map<string, string>();
+  for (const [entityId, packageName] of entityToPackage) {
+    const lastDot = entityId.lastIndexOf('.');
+    if (lastDot > 0) {
+      const moduleId = entityId.slice(0, lastDot);
+      // First writer wins: if multiple entities share a module, they all map to the same package
+      if (!moduleToPackage.has(moduleId)) {
+        moduleToPackage.set(moduleId, packageName);
       }
-      const parts = rel.split('/');
-      if (parts.length <= 1) return ''; // file directly in workspaceRoot
-      // Return parent directory path (all components except the filename)
-      return parts.slice(0, -1).join('/');
-    }
-
-    // Normalize path separators to forward slashes
-    const normalizedPath = filePath.replace(/\\/g, '/');
-
-    // Try to find '/src/' or 'src/' at the beginning
-    let afterSrc: string;
-    const srcIndex = normalizedPath.indexOf('/src/');
-    if (srcIndex !== -1) {
-      // Found '/src/' - extract everything after it
-      afterSrc = normalizedPath.substring(srcIndex + 5); // 5 = length of '/src/'
-    } else if (normalizedPath.startsWith('src/')) {
-      // Path starts with 'src/' - extract everything after 'src/'
-      afterSrc = normalizedPath.substring(4); // 4 = length of 'src/'
-    } else {
-      // No 'src/' prefix - use the whole path (for relative paths like 'parser/file.ts')
-      afterSrc = normalizedPath;
-    }
-
-    // Find the first slash to get the first directory
-    const firstSlashIndex = afterSrc.indexOf('/');
-    if (firstSlashIndex === -1) {
-      // No subdirectory - file is directly in the directory
-      return '';
-    }
-
-    return afterSrc.substring(0, firstSlashIndex);
-  }
-
-  /**
-   * For Kotlin, derive the logical package name directly from the entity ID.
-   * Entity IDs are always `com.example.pkg.ClassName` — strip the last component.
-   * Falls back to file-path extraction for all other languages.
-   */
-  private extractPackageFromEntity(
-    entity: Entity,
-    workspaceRoot?: string,
-    language?: ArchJSON['language']
-  ): string {
-    if (language === 'kotlin') {
-      const lastDot = entity.id.lastIndexOf('.');
-      return lastDot > 0 ? entity.id.slice(0, lastDot) : '';
-    }
-    return this.extractPackageFromFile(entity.sourceLocation.file, workspaceRoot, language);
-  }
-
-  private extractJavaMavenModule(
-    relativePath: string,
-    language?: ArchJSON['language']
-  ): string | null {
-    if (language !== 'java') {
-      return null;
-    }
-
-    const normalized = relativePath.replace(/\\/g, '/');
-    const match =
-      normalized.match(/^([^/]+)\/src\/(?:main|test)\/java\//) ??
-      normalized.match(/\/([^/]+)\/src\/(?:main|test)\/java\//);
-    if (!match) return null;
-    const moduleName = match[1];
-    // Skip Multi-Release JAR version directories (java9, java11, java17, java21, etc.)
-    // and META-INF, which are not Maven module names
-    if (/^java\d+$/.test(moduleName) || moduleName === 'META-INF') {
-      return null;
-    }
-    return moduleName;
-  }
-
-  /**
-   * Analyze package-level dependencies from class-level relations
-   *
-   * Maps class relations to package relations and deduplicates them.
-   * Filters out self-relations within the same package.
-   *
-   * @param entities - Array of entities
-   * @param relations - Array of class-level relations
-   * @returns Array of package-level relations
-   */
-  private analyzePackageDependencies(
-    entities: readonly Entity[],
-    relations: readonly Relation[],
-    workspaceRoot?: string,
-    language?: ArchJSON['language']
-  ): Relation[] {
-    // Create entity ID to package mapping
-    const entityToPackage = new Map<string, string>();
-    for (const entity of entities) {
-      const packageName = this.extractPackageFromEntity(entity, workspaceRoot, language);
-      entityToPackage.set(entity.id, packageName);
-    }
-
-    // Build module-level fallback map for Python (and other languages where relations
-    // use module IDs instead of class IDs as source/target).
-    //
-    // For each entity ID like 'pytorch.engine.Engine' in package 'pytorch':
-    //   strip last component → 'pytorch.engine' → maps to 'pytorch'
-    // This allows relations with source 'pytorch.engine' (module-level) to resolve
-    // to package 'pytorch' even though 'pytorch.engine' is not an entity ID.
-    const moduleToPackage = new Map<string, string>();
-    for (const [entityId, packageName] of entityToPackage) {
-      const lastDot = entityId.lastIndexOf('.');
-      if (lastDot > 0) {
-        const moduleId = entityId.slice(0, lastDot);
-        // First writer wins: if multiple entities share a module, they all map to the same package
-        if (!moduleToPackage.has(moduleId)) {
-          moduleToPackage.set(moduleId, packageName);
+      // Also register intermediate prefixes (for deeply nested module IDs)
+      // e.g., 'pytorch.engine.layers.LayerNorm' → also register 'pytorch.engine.layers' and 'pytorch.engine'
+      let prefix = moduleId;
+      let dotIdx: number;
+      while ((dotIdx = prefix.lastIndexOf('.')) > 0) {
+        prefix = prefix.slice(0, dotIdx);
+        if (!moduleToPackage.has(prefix)) {
+          moduleToPackage.set(prefix, packageName);
         }
-        // Also register intermediate prefixes (for deeply nested module IDs)
-        // e.g., 'pytorch.engine.layers.LayerNorm' → also register 'pytorch.engine.layers' and 'pytorch.engine'
-        let prefix = moduleId;
-        let dotIdx: number;
-        while ((dotIdx = prefix.lastIndexOf('.')) > 0) {
-          prefix = prefix.slice(0, dotIdx);
-          if (!moduleToPackage.has(prefix)) {
-            moduleToPackage.set(prefix, packageName);
-          }
-        }
       }
     }
-
-    // Map class relations to package relations
-    const packageRelationsMap = new Map<string, Relation>();
-
-    for (const relation of relations) {
-      const sourcePackage =
-        entityToPackage.get(relation.source) ?? moduleToPackage.get(relation.source);
-      const targetPackage =
-        entityToPackage.get(relation.target) ?? moduleToPackage.get(relation.target);
-
-      // Skip if packages are unknown, empty, or same
-      if (
-        sourcePackage === undefined ||
-        targetPackage === undefined ||
-        sourcePackage === '' ||
-        targetPackage === '' ||
-        sourcePackage === targetPackage
-      ) {
-        continue;
-      }
-
-      // Create unique key for deduplication
-      const key = `${sourcePackage}:${targetPackage}:${relation.type}`;
-
-      if (!packageRelationsMap.has(key)) {
-        packageRelationsMap.set(key, {
-          id: `pkg-${sourcePackage}-${targetPackage}-${relation.type}`,
-          type: relation.type,
-          source: sourcePackage,
-          target: targetPackage,
-        });
-      }
-    }
-
-    return Array.from(packageRelationsMap.values());
   }
+
+  // Map class relations to package relations
+  const packageRelationsMap = new Map<string, Relation>();
+
+  for (const relation of relations) {
+    const sourcePackage =
+      entityToPackage.get(relation.source) ?? moduleToPackage.get(relation.source);
+    const targetPackage =
+      entityToPackage.get(relation.target) ?? moduleToPackage.get(relation.target);
+
+    // Skip if packages are unknown, empty, or same
+    if (
+      sourcePackage === undefined ||
+      targetPackage === undefined ||
+      sourcePackage === '' ||
+      targetPackage === '' ||
+      sourcePackage === targetPackage
+    ) {
+      continue;
+    }
+
+    // Create unique key for deduplication
+    const key = `${sourcePackage}:${targetPackage}:${relation.type}`;
+
+    if (!packageRelationsMap.has(key)) {
+      packageRelationsMap.set(key, {
+        id: `pkg-${sourcePackage}-${targetPackage}-${relation.type}`,
+        type: relation.type,
+        source: sourcePackage,
+        target: targetPackage,
+      });
+    }
+  }
+
+  return Array.from(packageRelationsMap.values());
 }

@@ -77,9 +77,7 @@ vi.mock('@/mermaid/ts-module-graph-renderer.js', () => ({
 
 // Mock C++ package flowchart generator
 vi.mock('@/mermaid/cpp-package-flowchart-generator.js', () => ({
-  CppPackageFlowchartGenerator: vi.fn().mockImplementation(() => ({
-    generate: vi.fn().mockReturnValue('flowchart LR\n  pkgA --> pkgB'),
-  })),
+  generateCppPackageFlowchart: vi.fn().mockReturnValue('flowchart LR\n  pkgA --> pkgB'),
 }));
 
 // ---- typed mock helpers -----------------------------------------------------
@@ -649,7 +647,7 @@ describe('DiagramOutputRouter', () => {
 
   describe('C++ package routing', () => {
     it('routes to generateCppPackageOutput when language=cpp and level=package', async () => {
-      const { CppPackageFlowchartGenerator } =
+      const { generateCppPackageFlowchart } =
         await import('@/mermaid/cpp-package-flowchart-generator.js');
 
       const archJSON = makeArchJSON({ language: 'cpp' });
@@ -657,11 +655,11 @@ describe('DiagramOutputRouter', () => {
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
       await router.route(archJSON, makePaths(), makeDiagram({ level: 'package' }), makePool());
 
-      expect(CppPackageFlowchartGenerator).toHaveBeenCalled();
+      expect(generateCppPackageFlowchart).toHaveBeenCalled();
     });
 
     it('does NOT route to C++ package generator when level is not package', async () => {
-      const { CppPackageFlowchartGenerator } =
+      const { generateCppPackageFlowchart } =
         await import('@/mermaid/cpp-package-flowchart-generator.js');
       const { MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js');
 
@@ -670,12 +668,12 @@ describe('DiagramOutputRouter', () => {
       const router = new DiagramOutputRouter(makeGlobalConfig(), progress);
       await router.route(archJSON, makePaths(), makeDiagram({ level: 'class' }), makePool());
 
-      expect(CppPackageFlowchartGenerator).not.toHaveBeenCalled();
+      expect(generateCppPackageFlowchart).not.toHaveBeenCalled();
       expect(MermaidDiagramGenerator).toHaveBeenCalled();
     });
 
     it('uses archJSON.language not diagram.language for C++ routing decision', async () => {
-      const { CppPackageFlowchartGenerator } =
+      const { generateCppPackageFlowchart } =
         await import('@/mermaid/cpp-package-flowchart-generator.js');
 
       // archJSON.language is 'cpp' but diagram.language is undefined
@@ -688,7 +686,7 @@ describe('DiagramOutputRouter', () => {
         makePool()
       );
 
-      expect(CppPackageFlowchartGenerator).toHaveBeenCalled();
+      expect(generateCppPackageFlowchart).toHaveBeenCalled();
     });
   });
 

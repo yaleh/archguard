@@ -19,14 +19,14 @@ import {
 import { normalizeToDiagrams } from './normalize-to-diagrams.js';
 import type { DiagramResult } from '../processors/diagram-processor.js';
 import { TestAnalyzer } from '@/analysis/test-analyzer.js';
-import { TestOutputWriter } from '../utils/test-output-writer.js';
+import { writeTestOutput } from '../utils/test-output-writer.js';
 import { loadProjectSemanticsSidecar } from '@/analysis/project-semantics-loader.js';
 import {
   PROJECT_SEMANTICS_VERSION,
   mergeProjectSemantics,
   type ProjectSemantics,
 } from '@/types/extensions/project-semantics.js';
-import { MetricsHistoryWriter } from '../metrics-history-writer.js';
+import { appendMetricsHistory } from '../metrics-history-writer.js';
 import { buildArchIndex } from '@/core/query/arch-index-builder.js';
 import {
   computePackageFanMetricsFromRelations,
@@ -305,8 +305,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
 
         // Write test output files
         const testOutputDir = config.outputDir || path.join(config.workDir || workDir, 'output');
-        const writer = new TestOutputWriter();
-        await writer.write(testAnalysis, testOutputDir);
+        await writeTestOutput(testAnalysis, testOutputDir);
 
         // Generate coverage heatmap
         await processor.generateTestCoverageHeatmap(testAnalysis, archJson, testOutputDir);
@@ -410,13 +409,12 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
         });
 
         const metricsOutputDir = config.workDir || workDir;
-        const metricsWriter = new MetricsHistoryWriter();
         // getLastArchJson() is the primary scope's ArchJSON; record that scope's identity.
         const metricsScope =
           queryScopes.find((scope) => scope.archJson === metricsArchJson) ??
           queryScopes.find((scope) => scope.role === 'primary') ??
           queryScopes[0];
-        const appended = await metricsWriter.append(packages, metricsOutputDir, {
+        const appended = await appendMetricsHistory(packages, metricsOutputDir, {
           scopeKey: metricsScope?.key,
           sources: metricsScope?.sources,
         });

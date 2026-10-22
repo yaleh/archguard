@@ -16,7 +16,7 @@ import type {
   MermaidGeneratorOptions,
   MermaidTheme,
 } from './types.js';
-import { CommentGenerator } from './comment-generator.js';
+import { generateAll as generateAllComments, generateVisibleTitle } from './comment-generator.js';
 import {
   groupEntitiesByPackage,
   compareEntitiesForDiagram,
@@ -89,7 +89,6 @@ export class ValidatedMermaidGenerator {
   private readonly archJson: ArchJSON;
   private readonly options: Required<MermaidGeneratorOptions>;
   private readonly diagramConfig?: DiagramConfig;
-  private readonly commentGenerator: CommentGenerator;
   private readonly verbose: boolean;
   private _entityIdToName: Map<string, string> | null = null;
 
@@ -123,7 +122,6 @@ export class ValidatedMermaidGenerator {
     };
     this.diagramConfig = diagramConfig;
     this.verbose = options.verbose ?? false;
-    this.commentGenerator = new CommentGenerator();
   }
 
   /**
@@ -154,7 +152,7 @@ export class ValidatedMermaidGenerator {
     const lines: string[] = [header];
 
     if (this.diagramConfig && this.diagramConfig.annotations?.enableComments !== false) {
-      const comments = this.commentGenerator.generateAll(this.diagramConfig);
+      const comments = generateAllComments(this.diagramConfig);
       if (comments) {
         lines.push(comments);
         lines.push('');
@@ -165,7 +163,7 @@ export class ValidatedMermaidGenerator {
 
     // v2.1.1: Add visible title at the end (bottom) or beginning (top)
     if (this.diagramConfig && this.diagramConfig.annotations?.enableVisibleTitle) {
-      const visibleTitle = this.commentGenerator.generateVisibleTitle(this.diagramConfig);
+      const visibleTitle = generateVisibleTitle(this.diagramConfig);
       if (visibleTitle) {
         const position = this.diagramConfig.annotations.titlePosition || 'bottom';
 

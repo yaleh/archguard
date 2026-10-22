@@ -2,17 +2,11 @@
  * Unit tests for StructuralValidator
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { StructuralValidator } from '../../../src/mermaid/validator-structural';
+import { describe, it, expect } from 'vitest';
+import { validateStructure } from '../../../src/mermaid/validator-structural';
 import type { ArchJSON } from '../../../src/types';
 
 describe('StructuralValidator', () => {
-  let validator: StructuralValidator;
-
-  beforeEach(() => {
-    validator = new StructuralValidator();
-  });
-
   const createMockArchJSON = (entities: any[] = [], relations: any[] = []): ArchJSON => ({
     version: '1.1',
     language: 'typescript',
@@ -39,7 +33,7 @@ describe('StructuralValidator', () => {
   class Admin
   Admin --> User`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       expect(result.valid).toBe(false);
       expect(result.issues.length).toBeGreaterThan(0);
@@ -73,7 +67,7 @@ describe('StructuralValidator', () => {
   class User
   class Admin`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const missingIssues = result.issues.filter((i) => i.type === 'missing-entity');
       expect(missingIssues.length).toBe(0);
@@ -102,7 +96,7 @@ describe('StructuralValidator', () => {
       const mermaidCode = `classDiagram
   class Guest`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const missingIssues = result.issues.filter((i) => i.type === 'missing-entity');
       expect(missingIssues.length).toBe(2);
@@ -123,7 +117,7 @@ describe('StructuralValidator', () => {
       const mermaidCode = `classDiagram
   class Admin`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const missingIssue = result.issues.find((i) => i.type === 'missing-entity');
       expect(missingIssue).toBeDefined();
@@ -157,7 +151,7 @@ describe('StructuralValidator', () => {
       const mermaidCode = `classDiagram
   class User`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const invalidRelation = result.issues.find((i) => i.type === 'invalid-relation');
       expect(invalidRelation).toBeDefined();
@@ -189,7 +183,7 @@ describe('StructuralValidator', () => {
       const mermaidCode = `classDiagram
   class User`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const invalidRelation = result.issues.find((i) => i.type === 'invalid-relation');
       expect(invalidRelation).toBeDefined();
@@ -212,7 +206,7 @@ describe('StructuralValidator', () => {
       const mermaidCode = `classDiagram
   class Other`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const invalidRelation = result.issues.find((i) => i.type === 'invalid-relation');
       expect(invalidRelation).toBeDefined();
@@ -255,7 +249,7 @@ describe('StructuralValidator', () => {
   class Admin
   User --> Admin`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const invalidRelations = result.issues.filter((i) => i.type === 'invalid-relation');
       expect(invalidRelations.length).toBe(0);
@@ -305,7 +299,7 @@ describe('StructuralValidator', () => {
   A --> B
   B --> A`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const circularIssue = result.issues.find((i) => i.type === 'circular-dependency');
       expect(circularIssue).toBeDefined();
@@ -369,7 +363,7 @@ describe('StructuralValidator', () => {
   B --> C
   C --> A`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const circularIssue = result.issues.find((i) => i.type === 'circular-dependency');
       expect(circularIssue).toBeDefined();
@@ -426,7 +420,7 @@ describe('StructuralValidator', () => {
   A --> B
   B --> C`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const circularIssues = result.issues.filter((i) => i.type === 'circular-dependency');
       expect(circularIssues.length).toBe(0);
@@ -480,7 +474,7 @@ describe('StructuralValidator', () => {
   class Guest
   User --> Admin`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const orphanIssue = result.issues.find((i) => i.type === 'orphan-entity');
       expect(orphanIssue).toBeDefined();
@@ -522,7 +516,7 @@ describe('StructuralValidator', () => {
   class Admin
   User --> Admin`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const orphanIssues = result.issues.filter((i) => i.type === 'orphan-entity');
       expect(orphanIssues.length).toBe(0);
@@ -555,7 +549,7 @@ describe('StructuralValidator', () => {
   class User
   class Admin`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       const orphanIssues = result.issues.filter((i) => i.type === 'orphan-entity');
       expect(orphanIssues.length).toBe(2);
@@ -598,7 +592,7 @@ describe('StructuralValidator', () => {
   class Admin
   User --> Admin`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       expect(result.valid).toBe(true);
       expect(result.issues.length).toBe(0);
@@ -629,7 +623,7 @@ describe('StructuralValidator', () => {
       const mermaidCode = `classDiagram
   class Admin`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       expect(result.valid).toBe(false);
       expect(result.issues.length).toBeGreaterThan(0);
@@ -674,7 +668,7 @@ describe('StructuralValidator', () => {
       const mermaidCode = `classDiagram
   class Guest`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       // Should have missing-entity issues and circular-dependency
       const issueTypes = new Set(result.issues.map((i) => i.type));
@@ -690,7 +684,7 @@ describe('StructuralValidator', () => {
 
       const mermaidCode = `classDiagram`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       expect(result).toBeDefined();
       expect(result.valid).toBe(true); // No issues if everything is empty
@@ -711,7 +705,7 @@ describe('StructuralValidator', () => {
       const mermaidCode = `classDiagram
   class User`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       // Should have orphan-entity issue
       const orphanIssues = result.issues.filter((i) => i.type === 'orphan-entity');
@@ -752,7 +746,7 @@ describe('StructuralValidator', () => {
         mermaidCode += `  ${r.source} --> ${r.target}\n`;
       });
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateStructure(mermaidCode, archJson);
 
       expect(result).toBeDefined();
       // Should not have structural issues

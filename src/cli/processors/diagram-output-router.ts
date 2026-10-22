@@ -558,12 +558,11 @@ export class DiagramOutputRouter {
     paths: OutputPaths,
     pool: MermaidRenderWorkerPool
   ): Promise<void> {
-    const { CppPackageFlowchartGenerator } =
+    const { generateCppPackageFlowchart } =
       await import('@/mermaid/cpp-package-flowchart-generator.js');
     const { IsomorphicMermaidRenderer } = await import('@/mermaid/renderer.js');
 
-    const generator = new CppPackageFlowchartGenerator();
-    const mmdContent = generator.generate(archJSON);
+    const mmdContent = generateCppPackageFlowchart(archJSON);
 
     const mermaidRenderer = new IsomorphicMermaidRenderer(this.buildRendererOptions());
 

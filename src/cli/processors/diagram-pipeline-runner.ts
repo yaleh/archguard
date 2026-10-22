@@ -13,8 +13,8 @@
  * @module cli/processors/diagram-pipeline-runner
  */
 
-import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
-import { MetricsCalculator } from '@/parser/metrics-calculator.js';
+import { aggregateArchJSON } from '@/parser/archjson-aggregator.js';
+import { calculateMetrics } from '@/parser/metrics-calculator.js';
 import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
 import { DiagramOutputRouter, buildTsPackageGraphArchJson } from './diagram-output-router.js';
 import { resolveFormats } from '@/cli/utils/format-selection.js';
@@ -52,10 +52,19 @@ try {
  * on `run()` so the runner itself does not need to be reconstructed when the
  * parallel progress reporter is created after construction.
  */
+/** Aggregate an ArchJSON to the requested detail level. */
+export type AggregateFn = (archJSON: ArchJSON, level: DiagramConfig['level']) => ArchJSON;
+
+/** Compute metrics for an ArchJSON at the requested detail level. */
+export type CalculateMetricsFn = (
+  archJSON: ArchJSON,
+  level: DiagramConfig['level']
+) => ArchJSONMetrics;
+
 export class DiagramPipelineRunner {
   constructor(
-    private readonly aggregator: ArchJSONAggregator,
-    private readonly metricsCalculator: MetricsCalculator,
+    private readonly aggregate: AggregateFn = aggregateArchJSON,
+    private readonly calculateMetricsFn: CalculateMetricsFn = calculateMetrics,
     private readonly router: DiagramOutputRouter,
     private readonly globalConfig: GlobalConfig,
     private readonly progress: ProgressReporterLike,
@@ -92,7 +101,7 @@ export class DiagramPipelineRunner {
       if (progress) {
         progress.update(diagram.name, 50, 'Aggregating');
       }
-      const aggregatedJSON = this.aggregator.aggregate(rawArchJSON, diagram.level);
+      const aggregatedJSON = this.aggregate(rawArchJSON, diagram.level);
 
       // 1b. For TS package-level output, replace the aggregator's shallow
       // top-level packages with the module graph's directory-level entities and
@@ -126,10 +135,7 @@ export class DiagramPipelineRunner {
       // Compute metrics unconditionally so they can be attached to the DiagramResult
       // (consumers like DiagramIndexGenerator need them regardless of output format).
       // Always embed metrics so json format gets them; mermaid renderers ignore the field.
-      const computedMetrics: ArchJSONMetrics = this.metricsCalculator.calculate(
-        levelJSON,
-        diagram.level
-      );
+      const computedMetrics: ArchJSONMetrics = this.calculateMetricsFn(levelJSON, diagram.level);
       const outputJSON: ArchJSON = {
         ...levelJSON,
         metrics: computedMetrics,

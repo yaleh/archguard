@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { MetricsCalculator } from '@/parser/metrics-calculator.js';
+import { calculateMetrics } from '@/parser/metrics-calculator.js';
 import type { ArchJSON, Entity, Relation } from '@/types/index.js';
 import type { DetailLevel } from '@/types/config.js';
 
@@ -72,7 +72,7 @@ const makeMember = (
 // ---------------------------------------------------------------------------
 
 describe('MetricsCalculator — basic metrics', () => {
-  const calc = new MetricsCalculator();
+  const calc = { calculate: calculateMetrics };
 
   it('empty graph: all counts are 0, ratio is 0, SCC is 0', () => {
     const arch = makeArchJSON([], []);
@@ -189,7 +189,7 @@ describe('MetricsCalculator — basic metrics', () => {
 // ---------------------------------------------------------------------------
 
 describe('MetricsCalculator — SCC', () => {
-  const calc = new MetricsCalculator();
+  const calc = { calculate: calculateMetrics };
 
   it('no relations: SCC === entityCount (each node is its own SCC)', () => {
     const arch = makeArchJSON([makeEntity('A'), makeEntity('B'), makeEntity('C')], []);
@@ -310,7 +310,7 @@ describe('MetricsCalculator — SCC', () => {
 // ---------------------------------------------------------------------------
 
 describe('MetricsCalculator — cycles', () => {
-  const calc = new MetricsCalculator();
+  const calc = { calculate: calculateMetrics };
 
   it('no cycle: cycles = []', () => {
     const arch = makeArchJSON([makeEntity('A'), makeEntity('B')], [makeRelation('r1', 'A', 'B')]);
@@ -452,7 +452,7 @@ describe('MetricsCalculator — cycles', () => {
 // ---------------------------------------------------------------------------
 
 describe('MetricsCalculator — fileStats', () => {
-  const calc = new MetricsCalculator();
+  const calc = { calculate: calculateMetrics };
 
   it('single file: one FileStats entry', () => {
     const arch = makeArchJSON([makeEntityInFile('A', 'src/a.ts', 50)], []);

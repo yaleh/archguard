@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FrameworkDetector } from '@/plugins/golang/atlas/framework-detector.js';
+import { detectFrameworks } from '@/plugins/golang/atlas/framework-detector.js';
 import type { ModuleInfo } from '@/plugins/golang/atlas/go-mod-resolver.js';
 import type { GoRawData, GoRawPackage } from '@/plugins/golang/types.js';
 
@@ -38,7 +38,7 @@ function makePkg(overrides?: Partial<GoRawPackage>): GoRawPackage {
 }
 
 describe('FrameworkDetector', () => {
-  const detector = new FrameworkDetector();
+  const detector = { detect: detectFrameworks };
 
   describe('always includes net/http', () => {
     it('net/http is detected even with no requires and no imports', () => {
@@ -344,7 +344,7 @@ describe('FrameworkDetector', () => {
 // ─── Phase 102: MCP SDK detection ──────────────────────────────────────────
 
 describe('FrameworkDetector — MCP SDKs', () => {
-  const detector = new FrameworkDetector();
+  const detector = { detect: detectFrameworks };
   const emptyRawData = makeRawData();
 
   it('detects mcp-go from go.mod requires', () => {

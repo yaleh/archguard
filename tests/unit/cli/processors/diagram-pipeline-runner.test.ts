@@ -32,8 +32,8 @@ vi.mock('@/mermaid/render-worker-pool.js', () => ({
 }));
 
 import { DiagramPipelineRunner } from '@/cli/processors/diagram-pipeline-runner.js';
-import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
-import { MetricsCalculator } from '@/parser/metrics-calculator.js';
+import { aggregateArchJSON } from '@/parser/archjson-aggregator.js';
+import { calculateMetrics } from '@/parser/metrics-calculator.js';
 import { OutputPathResolver } from '@/cli/utils/output-path-resolver.js';
 import { DiagramOutputRouter } from '@/cli/processors/diagram-output-router.js';
 import { ParallelProgressReporter } from '@/cli/progress/parallel-progress.js';
@@ -132,13 +132,9 @@ function makePool(): InstanceType<typeof MermaidRenderWorkerPool> {
 // ---------------------------------------------------------------------------
 
 function setupBaseMocks(archJson: ArchJSON = makeArchJson(1, 0)) {
-  (ArchJSONAggregator as any).mockImplementation(() => ({
-    aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
-  }));
+  (aggregateArchJSON as any).mockImplementation((json: ArchJSON) => json);
 
-  (MetricsCalculator as any).mockImplementation(() => ({
-    calculate: vi.fn().mockReturnValue(MOCK_METRICS),
-  }));
+  (calculateMetrics as any).mockReturnValue(MOCK_METRICS);
 
   (OutputPathResolver as any).mockImplementation(() => ({
     resolve: vi.fn().mockReturnValue(MOCK_PATHS),
@@ -165,12 +161,10 @@ function makeRunner(
   progress = makeProgress(),
   parallelProgress?: any
 ) {
-  const aggregator = new ArchJSONAggregator() as any;
-  const metricsCalc = new MetricsCalculator() as any;
   const router = new DiagramOutputRouter(globalConfig, progress) as any;
   return new DiagramPipelineRunner(
-    aggregator,
-    metricsCalc,
+    aggregateArchJSON as any,
+    calculateMetrics as any,
     router,
     globalConfig,
     progress,
@@ -322,12 +316,8 @@ describe('DiagramPipelineRunner', () => {
         },
       };
 
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
-      }));
-      (MetricsCalculator as any).mockImplementation(() => ({
-        calculate: vi.fn().mockReturnValue(MOCK_METRICS),
-      }));
+      (aggregateArchJSON as any).mockImplementation((json: ArchJSON) => json);
+      (calculateMetrics as any).mockReturnValue(MOCK_METRICS);
       (OutputPathResolver as any).mockImplementation(() => ({
         resolve: vi.fn().mockReturnValue(MOCK_PATHS),
         ensureDirectory: vi.fn().mockResolvedValue(undefined),
@@ -437,7 +427,7 @@ describe('DiagramPipelineRunner', () => {
     }
 
     async function runPackage(moduleGraphArchJSON: ArchJSON) {
-      const { MetricsCalculator: RealMetricsCalculator } = await vi.importActual<
+      const { calculateMetrics: realCalculateMetrics } = await vi.importActual<
         typeof import('@/parser/metrics-calculator.js')
       >('@/parser/metrics-calculator.js');
 
@@ -448,8 +438,8 @@ describe('DiagramPipelineRunner', () => {
 
       const config = makeGlobalConfig({ formats: ['json'] });
       const runner = new DiagramPipelineRunner(
-        new ArchJSONAggregator() as any,
-        new RealMetricsCalculator() as any,
+        aggregateArchJSON as any,
+        realCalculateMetrics as any,
         new DiagramOutputRouter(config, makeProgress()) as any,
         config,
         makeProgress()

@@ -6,15 +6,25 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { CommentGenerator } from '@/mermaid/comment-generator.js';
+import {
+  generateAll,
+  generateHeader,
+  generatePatternComments,
+  generateProcessComments,
+  generateUsageComments,
+  generateVisibleTitle,
+} from '@/mermaid/comment-generator.js';
 import type { DiagramConfig } from '@/types/config.js';
 
 describe('CommentGenerator', () => {
-  let generator: CommentGenerator;
-
-  beforeEach(() => {
-    generator = new CommentGenerator();
-  });
+  const generator = {
+    generateAll,
+    generateHeader,
+    generatePatternComments,
+    generateProcessComments,
+    generateUsageComments,
+    generateVisibleTitle,
+  };
 
   describe('generateHeader', () => {
     it('should generate complete header comments with full metadata', () => {

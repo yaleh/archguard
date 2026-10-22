@@ -14,8 +14,8 @@ import type {
 } from '@/types/extensions/test-analysis.js';
 import { TEST_ANALYSIS_VERSION } from '@/types/extensions/test-analysis.js';
 import type { ProjectSemantics } from '@/types/extensions/project-semantics.js';
-import { TestCoverageMapper } from './test-coverage-mapper.js';
-import { TestIssueDetector } from './test-issue-detector.js';
+import { buildCoverageMap } from './test-coverage-mapper.js';
+import { detectTestIssues } from './test-issue-detector.js';
 
 export interface TestAnalyzerOptions {
   workspaceRoot: string;
@@ -67,9 +67,6 @@ export function mergeProjectSemanticsIntoPatternConfig(
 }
 
 export class TestAnalyzer {
-  private mapper = new TestCoverageMapper();
-  private issueDetector = new TestIssueDetector();
-
   async analyze(
     archJson: ArchJSON,
     plugin: ILanguagePlugin,
@@ -90,8 +87,8 @@ export class TestAnalyzer {
     const roots = await this.resolveDiscoveryRoots(workspaceRoot, plugin, testSources);
     const rawFiles = await this.collectRawTestFiles(testFilePaths, plugin, effectivePatternConfig);
     const testFiles = this.buildTestFileInfos(rawFiles, archJson, workspaceRoot);
-    const coverageMap = this.mapper.buildCoverageMap(testFiles, archJson, workspaceRoot);
-    const issues = this.issueDetector.detect(testFiles, coverageMap);
+    const coverageMap = buildCoverageMap(testFiles, archJson, workspaceRoot);
+    const issues = detectTestIssues(testFiles, coverageMap);
     const metrics = this.computeMetrics(testFiles, coverageMap, issues, archJson);
 
     return {

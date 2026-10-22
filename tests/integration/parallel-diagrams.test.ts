@@ -127,11 +127,9 @@ describe('DiagramProcessor.parallel', () => {
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+      const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
+      (aggregateArchJSON as any).mockImplementation(mockAggregate);
 
       // Mock OutputPathResolver
       const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
@@ -219,11 +217,9 @@ describe('DiagramProcessor.parallel', () => {
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+      const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
+      (aggregateArchJSON as any).mockImplementation(mockAggregate);
 
       // Mock OutputPathResolver
       const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
@@ -317,11 +313,9 @@ describe('DiagramProcessor.parallel', () => {
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+      const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
+      (aggregateArchJSON as any).mockImplementation(mockAggregate);
 
       // Mock OutputPathResolver
       const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
@@ -397,11 +391,9 @@ describe('DiagramProcessor.parallel', () => {
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+      const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
+      (aggregateArchJSON as any).mockImplementation(mockAggregate);
 
       // Mock OutputPathResolver
       const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
@@ -491,11 +483,9 @@ describe('DiagramProcessor.parallel', () => {
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
+      const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
+      (aggregateArchJSON as any).mockImplementation(mockAggregate);
 
       // Mock OutputPathResolver
       const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');

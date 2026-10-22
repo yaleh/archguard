@@ -14,9 +14,9 @@ export { HeuristicGrouper } from './grouper.js';
 
 // Validators
 export { MermaidParseValidator } from './validator-parse.js';
-export { StructuralValidator } from './validator-structural.js';
+export { validateStructure } from './validator-structural.js';
 export { RenderValidator } from './validator-render.js';
-export { QualityValidator } from './validator-quality.js';
+export { validateQuality } from './validator-quality.js';
 
 // Validation Pipeline
 export { MermaidValidationPipeline } from './validation-pipeline.js';

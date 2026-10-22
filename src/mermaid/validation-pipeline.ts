@@ -6,24 +6,20 @@
 import type { ArchJSON } from '../types/index.js';
 import type { ValidationPipelineResult, ValidationFullResult } from './types.js';
 import { MermaidParseValidator } from './validator-parse.js';
-import { StructuralValidator } from './validator-structural.js';
+import { validateStructure } from './validator-structural.js';
 import { RenderValidator } from './validator-render.js';
-import { QualityValidator } from './validator-quality.js';
+import { validateQuality } from './validator-quality.js';
 
 /**
  * Pipeline for comprehensive Mermaid diagram validation
  */
 export class MermaidValidationPipeline {
   private parseValidator: MermaidParseValidator;
-  private structuralValidator: StructuralValidator;
   private renderValidator: RenderValidator;
-  private qualityValidator: QualityValidator;
 
   constructor(_config?: unknown) {
     this.parseValidator = new MermaidParseValidator();
-    this.structuralValidator = new StructuralValidator();
     this.renderValidator = new RenderValidator();
-    this.qualityValidator = new QualityValidator();
   }
 
   /**
@@ -34,13 +30,13 @@ export class MermaidValidationPipeline {
     const parseResult = await this.parseValidator.validate(mermaidCode);
 
     // Step 2: Structural validation (integrity check)
-    const structuralResult = this.structuralValidator.validate(mermaidCode, archJson);
+    const structuralResult = validateStructure(mermaidCode, archJson);
 
     // Step 3: Render validation (can it be rendered?)
     const renderResult = this.renderValidator.validate(mermaidCode);
 
     // Step 4: Quality validation (how good is it?)
-    const qualityResult = this.qualityValidator.validate(mermaidCode, archJson);
+    const qualityResult = validateQuality(mermaidCode, archJson);
 
     // Calculate overall result
     const overall = this.calculateOverall({
@@ -101,13 +97,13 @@ export class MermaidValidationPipeline {
     const parseResult = await this.parseValidator.validate(mermaidCode);
 
     // Step 2: Structural validation
-    const structuralResult = this.structuralValidator.validate(mermaidCode, archJson);
+    const structuralResult = validateStructure(mermaidCode, archJson);
 
     // Step 3: Render validation
     const renderResult = this.renderValidator.validate(mermaidCode);
 
     // Step 4: Quality validation
-    const qualityResult = this.qualityValidator.validate(mermaidCode, archJson);
+    const qualityResult = validateQuality(mermaidCode, archJson);
 
     // Calculate overall
     const overall = this.calculateOverall({

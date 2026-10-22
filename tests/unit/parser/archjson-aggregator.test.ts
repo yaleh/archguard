@@ -5,11 +5,23 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
+import {
+  aggregateArchJSON,
+  aggregateToClassLevel,
+  aggregateToPackageLevel,
+  analyzePackageDependencies,
+  extractPackages,
+} from '@/parser/archjson-aggregator.js';
 import type { ArchJSON, Entity, Relation } from '@/types/index.js';
 
 describe('ArchJSONAggregator', () => {
-  const aggregator = new ArchJSONAggregator();
+  const aggregator = {
+    aggregate: aggregateArchJSON,
+    aggregateToClassLevel,
+    aggregateToPackageLevel,
+    analyzePackageDependencies,
+    extractPackages,
+  };
 
   // Sample test data
   const createTestArchJSON = (): ArchJSON => ({
@@ -1145,10 +1157,22 @@ describe('ArchJSONAggregator', () => {
   });
 
   describe('analyzePackageDependencies — Python module-level relation sources', () => {
-    let aggregator: ArchJSONAggregator;
+    let aggregator: {
+      aggregate: typeof aggregateArchJSON;
+      aggregateToClassLevel: typeof aggregateToClassLevel;
+      aggregateToPackageLevel: typeof aggregateToPackageLevel;
+      analyzePackageDependencies: typeof analyzePackageDependencies;
+      extractPackages: typeof extractPackages;
+    };
 
     beforeEach(() => {
-      aggregator = new ArchJSONAggregator();
+      aggregator = {
+        aggregate: aggregateArchJSON,
+        aggregateToClassLevel,
+        aggregateToPackageLevel,
+        analyzePackageDependencies,
+        extractPackages,
+      };
     });
 
     it('resolves module-level source to package when entity is in that module', () => {

@@ -2,17 +2,11 @@
  * Unit tests for QualityValidator
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { QualityValidator } from '../../../src/mermaid/validator-quality';
+import { describe, it, expect } from 'vitest';
+import { validateQuality } from '../../../src/mermaid/validator-quality';
 import type { ArchJSON } from '../../../src/types';
 
 describe('QualityValidator', () => {
-  let validator: QualityValidator;
-
-  beforeEach(() => {
-    validator = new QualityValidator();
-  });
-
   const createMockArchJSON = (entities: any[] = [], relations: any[] = []): ArchJSON => ({
     version: '1.1',
     language: 'typescript',
@@ -41,7 +35,7 @@ describe('QualityValidator', () => {
     +getEmail() String
   }`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.metrics.readability).toBeGreaterThan(70);
     });
@@ -66,7 +60,7 @@ describe('QualityValidator', () => {
       }
       mermaidCode += '  }\n';
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       // Should have penalty: 10 lines * 2 = 20 points
       // Bonus for indentation: +5
@@ -97,7 +91,7 @@ describe('QualityValidator', () => {
       }
       mermaidCode += '  }\n';
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.metrics.readability).toBeLessThan(100);
     });
@@ -129,7 +123,7 @@ describe('QualityValidator', () => {
   class Admin
   User --> Admin`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.metrics.completeness).toBeGreaterThan(80);
     });
@@ -157,7 +151,7 @@ describe('QualityValidator', () => {
       const mermaidCode = `classDiagram
   class User`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.metrics.completeness).toBeLessThan(100);
     });
@@ -198,7 +192,7 @@ describe('QualityValidator', () => {
   class Admin
   %% No relation defined even though it exists in ArchJSON`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       // Both entities are present (no penalty for missing entities)
       // But the relation between them is missing (should detect missing relation)
@@ -266,7 +260,7 @@ describe('QualityValidator', () => {
       const archJson = createMockArchJSON(entities, relations);
       const mermaidCode = mermaidLines.join('\n');
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       // After the fix: validator recognises escaped IDs → completeness ≥ 80
       // Without the fix: 20 failing relations × -5 = -100 → completeness = 0
@@ -300,7 +294,7 @@ describe('QualityValidator', () => {
   class AdminService
   UserController --> AdminService`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.metrics.consistency).toBeGreaterThan(80);
     });
@@ -338,7 +332,7 @@ describe('QualityValidator', () => {
   class AdminController
   class SERVICE-DATA`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.metrics.consistency).toBeLessThan(100);
     });
@@ -362,7 +356,7 @@ describe('QualityValidator', () => {
     +getEmail() String
   }`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       // Should have some impact on consistency score
       expect(result.metrics.consistency).toBeDefined();
@@ -405,7 +399,7 @@ describe('QualityValidator', () => {
   class Admin
   User --> Admin`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.metrics.complexity).toBeGreaterThan(80);
     });
@@ -428,7 +422,7 @@ describe('QualityValidator', () => {
       const mermaidCode = `classDiagram
   ${entities.map((e) => `  class ${e.name}`).join('\n')}`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.metrics.complexity).toBeLessThan(100);
     });
@@ -463,7 +457,7 @@ describe('QualityValidator', () => {
   ${entities.map((e) => `  class ${e.name}`).join('\n')}
   ${relations.map((r) => `  ${r.source} --> ${r.target}`).join('\n')}`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.metrics.complexity).toBeLessThan(100);
     });
@@ -511,7 +505,7 @@ describe('QualityValidator', () => {
         mermaidCode += `  ${r.source} --> ${r.target}\n`;
       });
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.metrics.complexity).toBeLessThan(100);
     });
@@ -536,7 +530,7 @@ describe('QualityValidator', () => {
     +getEmail() String
   }`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.score).toBeGreaterThanOrEqual(0);
       expect(result.score).toBeLessThanOrEqual(100);
@@ -559,7 +553,7 @@ describe('QualityValidator', () => {
     +String name
   }`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       if (result.score >= 60) {
         expect(result.valid).toBe(true);
@@ -588,7 +582,7 @@ describe('QualityValidator', () => {
     ${longLine}
   }`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       if (result.metrics.readability < 70) {
         const layoutSuggestion = result.suggestions.find((s) => s.type === 'layout');
@@ -619,7 +613,7 @@ describe('QualityValidator', () => {
       const mermaidCode = `classDiagram
   class User`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       if (result.metrics.completeness < 80) {
         const completenessSuggestion = result.suggestions.find((s) => s.type === 'detail-level');
@@ -652,7 +646,7 @@ describe('QualityValidator', () => {
   class user
   class AdminController`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       if (result.metrics.consistency < 70) {
         const namingSuggestion = result.suggestions.find((s) => s.type === 'naming');
@@ -678,7 +672,7 @@ describe('QualityValidator', () => {
       const mermaidCode = `classDiagram
   ${entities.map((e) => `  class ${e.name}`).join('\n')}`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       if (result.metrics.complexity < 60) {
         const groupingSuggestion = result.suggestions.find((s) => s.type === 'grouping');
@@ -694,7 +688,7 @@ describe('QualityValidator', () => {
 
       const mermaidCode = 'classDiagram';
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result).toBeDefined();
       expect(result.score).toBeGreaterThanOrEqual(0);
@@ -706,7 +700,7 @@ describe('QualityValidator', () => {
 
       const mermaidCode = 'classDiagram';
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result).toBeDefined();
     });
@@ -742,7 +736,7 @@ describe('QualityValidator', () => {
         mermaidCode += `  class ${e.name}\n`;
       });
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result).toBeDefined();
       expect(result.score).toBeGreaterThanOrEqual(0);
@@ -807,7 +801,7 @@ describe('QualityValidator', () => {
   UserController --> UserService
   UserService --> UserRepository`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       expect(result.score).toBeGreaterThan(60);
       expect(result.valid).toBe(true);
@@ -848,7 +842,7 @@ describe('QualityValidator', () => {
   class a
   class B`;
 
-      const result = validator.validate(mermaidCode, archJson);
+      const result = validateQuality(mermaidCode, archJson);
 
       // Should have metrics calculated
       expect(result.metrics).toBeDefined();

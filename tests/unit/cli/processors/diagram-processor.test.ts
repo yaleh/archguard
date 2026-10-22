@@ -661,14 +661,14 @@ describe('DiagramProcessor', () => {
     /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment */
     let FileDiscoveryService: any;
     let ParallelParser: any;
-    let ArchJSONAggregator: any;
+    let aggregateArchJSON: any;
     let OutputPathResolver: any;
     let MermaidDiagramGenerator: any;
 
     beforeEach(async () => {
       ({ FileDiscoveryService } = await import('@/cli/utils/file-discovery-service.js'));
       ({ ParallelParser } = await import('@/parser/parallel-parser.js'));
-      ({ ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js'));
+      ({ aggregateArchJSON } = await import('@/parser/archjson-aggregator.js'));
       ({ OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js'));
       ({ MermaidDiagramGenerator } = await import('@/mermaid/diagram-generator.js'));
     });
@@ -690,9 +690,7 @@ describe('DiagramProcessor', () => {
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      ArchJSONAggregator.mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
+      aggregateArchJSON.mockImplementation(mockAggregate);
 
       // Mock OutputPathResolver
       const mockResolve = vi.fn().mockReturnValue({
@@ -751,9 +749,7 @@ describe('DiagramProcessor', () => {
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      ArchJSONAggregator.mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
+      aggregateArchJSON.mockImplementation(mockAggregate);
 
       // Mock OutputPathResolver
       const mockResolve = vi
@@ -826,9 +822,7 @@ describe('DiagramProcessor', () => {
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      ArchJSONAggregator.mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
+      aggregateArchJSON.mockImplementation(mockAggregate);
 
       // Mock OutputPathResolver
       const mockResolve = vi.fn().mockReturnValue({
@@ -893,9 +887,7 @@ describe('DiagramProcessor', () => {
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      ArchJSONAggregator.mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
+      aggregateArchJSON.mockImplementation(mockAggregate);
 
       // Mock OutputPathResolver
       const mockResolve = vi.fn().mockReturnValue({
@@ -955,9 +947,7 @@ describe('DiagramProcessor', () => {
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      ArchJSONAggregator.mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
+      aggregateArchJSON.mockImplementation(mockAggregate);
 
       // Mock OutputPathResolver
       const mockResolve = vi.fn().mockReturnValue({
@@ -1033,9 +1023,7 @@ describe('DiagramProcessor', () => {
 
       // Mock ArchJSONAggregator
       const mockAggregate = vi.fn().mockImplementation((json) => json);
-      ArchJSONAggregator.mockImplementation(() => ({
-        aggregate: mockAggregate,
-      }));
+      aggregateArchJSON.mockImplementation(mockAggregate);
 
       // Mock OutputPathResolver
       const mockResolve = vi.fn().mockReturnValue({
@@ -1124,10 +1112,8 @@ describe('DiagramProcessor', () => {
       }));
 
       // Mock ArchJSONAggregator
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
-      }));
+      const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
+      (aggregateArchJSON as any).mockImplementation((json: ArchJSON) => json);
     });
 
     it('uses registry golang plugin instead of dynamic import for Go diagrams', async () => {
@@ -1254,11 +1240,8 @@ describe('DiagramProcessor', () => {
         parseFiles: vi.fn().mockResolvedValue(archJSON),
       }));
 
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        // Return the same reference to simulate 'method'-level pass-through
-        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
-      }));
+      const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
+      (aggregateArchJSON as any).mockImplementation((json: ArchJSON) => json);
 
       const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
       (OutputPathResolver as any).mockImplementation(() => ({
@@ -1520,10 +1503,8 @@ describe('DiagramProcessor', () => {
       };
       registry.register(mockTsPlugin);
 
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
-      }));
+      const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
+      (aggregateArchJSON as any).mockImplementation((json: ArchJSON) => json);
 
       const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
       (OutputPathResolver as any).mockImplementation(() => ({
@@ -1585,10 +1566,8 @@ describe('DiagramProcessor', () => {
       };
       registry.register(mockTsPlugin);
 
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
-      }));
+      const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
+      (aggregateArchJSON as any).mockImplementation((json: ArchJSON) => json);
 
       const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
       (OutputPathResolver as any).mockImplementation(() => ({
@@ -1634,10 +1613,8 @@ describe('DiagramProcessor', () => {
         parseFiles: vi.fn().mockResolvedValue(archJSONWithGraph),
       }));
 
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
-      }));
+      const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
+      (aggregateArchJSON as any).mockImplementation((json: ArchJSON) => json);
 
       const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
       (OutputPathResolver as any).mockImplementation(() => ({
@@ -1742,10 +1719,8 @@ describe('DiagramProcessor', () => {
       };
       registry.register(mockGoPlugin);
 
-      const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
-      (ArchJSONAggregator as any).mockImplementation(() => ({
-        aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
-      }));
+      const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
+      (aggregateArchJSON as any).mockImplementation((json: ArchJSON) => json);
 
       const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
       (OutputPathResolver as any).mockImplementation(() => ({
@@ -1852,10 +1827,8 @@ describe('Atlas layer parallel rendering', () => {
    * Setup standard mocks needed for Go Atlas processing.
    */
   const setupCommonMocks = async () => {
-    const { ArchJSONAggregator } = await import('@/parser/archjson-aggregator.js');
-    (ArchJSONAggregator as any).mockImplementation(() => ({
-      aggregate: vi.fn().mockImplementation((json: ArchJSON) => json),
-    }));
+    const { aggregateArchJSON } = await import('@/parser/archjson-aggregator.js');
+    (aggregateArchJSON as any).mockImplementation((json: ArchJSON) => json);
 
     const { OutputPathResolver } = await import('@/cli/utils/output-path-resolver.js');
     (OutputPathResolver as any).mockImplementation(() => ({

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CppPackageFlowchartGenerator } from '@/mermaid/cpp-package-flowchart-generator.js';
+import { generateCppPackageFlowchart } from '@/mermaid/cpp-package-flowchart-generator.js';
 import type { ArchJSON } from '@/types/index.js';
 
 function makeArchJSON(entities: any[], relations: any[] = []): ArchJSON {
@@ -14,7 +14,7 @@ function makeArchJSON(entities: any[], relations: any[] = []): ArchJSON {
 }
 
 describe('CppPackageFlowchartGenerator', () => {
-  const gen = new CppPackageFlowchartGenerator();
+  const gen = { generate: generateCppPackageFlowchart };
 
   it('generates flowchart header', () => {
     const result = gen.generate(makeArchJSON([]));

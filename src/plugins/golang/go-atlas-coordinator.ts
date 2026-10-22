@@ -1,7 +1,7 @@
 import { BehaviorAnalyzer } from './atlas/behavior-analyzer.js';
 import { AtlasRenderer } from './atlas/renderers/atlas-renderer.js';
 import { GoModResolver } from './atlas/go-mod-resolver.js';
-import { FrameworkDetector } from './atlas/framework-detector.js';
+import { detectFrameworks } from './atlas/framework-detector.js';
 import type { GoRawData } from './types.js';
 import type {
   GoArchitectureAtlas,
@@ -30,7 +30,7 @@ export class GoAtlasCoordinator {
     startTime: number = performance.now()
   ): Promise<GoArchitectureAtlas> {
     const moduleInfo = await this.goModResolver.resolveProject(rootPath);
-    const detectedFrameworks = new FrameworkDetector().detect(moduleInfo, rawData);
+    const detectedFrameworks = detectFrameworks(moduleInfo, rawData);
 
     const [packageGraph, capabilityGraph, goroutineTopology, flowGraph] = await Promise.all([
       this.behaviorAnalyzer.buildPackageGraph(rawData),

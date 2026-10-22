@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
-import { TestOutputWriter } from '@/cli/utils/test-output-writer.js';
+import { writeTestOutput } from '@/cli/utils/test-output-writer.js';
 import type { TestAnalysis } from '@/types/extensions/test-analysis.js';
 
 const makeAnalysis = (overrides: Partial<TestAnalysis> = {}): TestAnalysis => ({
@@ -40,7 +40,7 @@ describe('TestOutputWriter', () => {
   });
 
   it('creates test/metrics.md and test/issues.md', async () => {
-    const writer = new TestOutputWriter();
+    const writer = { write: writeTestOutput };
     await writer.write(makeAnalysis(), tmpDir);
 
     expect(await fs.pathExists(path.join(tmpDir, 'test', 'metrics.md'))).toBe(true);
@@ -48,7 +48,7 @@ describe('TestOutputWriter', () => {
   });
 
   it('metrics.md contains total test files count', async () => {
-    const writer = new TestOutputWriter();
+    const writer = { write: writeTestOutput };
     await writer.write(makeAnalysis(), tmpDir);
 
     const content = await fs.readFile(path.join(tmpDir, 'test', 'metrics.md'), 'utf-8');
@@ -57,7 +57,7 @@ describe('TestOutputWriter', () => {
   });
 
   it('metrics.md contains coverage ratio as percentage', async () => {
-    const writer = new TestOutputWriter();
+    const writer = { write: writeTestOutput };
     await writer.write(makeAnalysis(), tmpDir);
 
     const content = await fs.readFile(path.join(tmpDir, 'test', 'metrics.md'), 'utf-8');
@@ -65,7 +65,7 @@ describe('TestOutputWriter', () => {
   });
 
   it('issues.md contains "No issues detected." when there are no issues', async () => {
-    const writer = new TestOutputWriter();
+    const writer = { write: writeTestOutput };
     await writer.write(makeAnalysis({ issues: [] }), tmpDir);
 
     const content = await fs.readFile(path.join(tmpDir, 'test', 'issues.md'), 'utf-8');
@@ -84,7 +84,7 @@ describe('TestOutputWriter', () => {
         },
       ],
     });
-    const writer = new TestOutputWriter();
+    const writer = { write: writeTestOutput };
     await writer.write(analysis, tmpDir);
 
     const content = await fs.readFile(path.join(tmpDir, 'test', 'issues.md'), 'utf-8');
@@ -105,7 +105,7 @@ describe('TestOutputWriter', () => {
         },
       ],
     });
-    const writer = new TestOutputWriter();
+    const writer = { write: writeTestOutput };
     await writer.write(analysis, tmpDir);
 
     const content = await fs.readFile(path.join(tmpDir, 'test', 'issues.md'), 'utf-8');

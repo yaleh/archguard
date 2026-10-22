@@ -7,7 +7,7 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import { readHistoryEntries, UNKNOWN_SCOPE } from '@/analysis/metrics-history-reader.js';
-import { MetricsHistoryWriter } from '@/cli/metrics-history-writer.js';
+import { METRICS_HISTORY_FILENAME } from '@/analysis/metrics-history-types.js';
 
 describe('readHistoryEntries', () => {
   let dir: string;
@@ -25,7 +25,7 @@ describe('readHistoryEntries', () => {
   });
 
   it('reads valid JSONL entries', async () => {
-    const file = path.join(dir, MetricsHistoryWriter.FILENAME);
+    const file = path.join(dir, METRICS_HISTORY_FILENAME);
     await fs.writeFile(
       file,
       [
@@ -41,7 +41,7 @@ describe('readHistoryEntries', () => {
   });
 
   it('skips malformed lines', async () => {
-    const file = path.join(dir, MetricsHistoryWriter.FILENAME);
+    const file = path.join(dir, METRICS_HISTORY_FILENAME);
     await fs.writeFile(
       file,
       [
@@ -57,7 +57,7 @@ describe('readHistoryEntries', () => {
   });
 
   it('ignores blank lines', async () => {
-    const file = path.join(dir, MetricsHistoryWriter.FILENAME);
+    const file = path.join(dir, METRICS_HISTORY_FILENAME);
     await fs.writeFile(
       file,
       '\n\n' + JSON.stringify({ timestamp: '2026-01-05T00:00:00Z', packages: [] }) + '\n\n',
@@ -68,14 +68,14 @@ describe('readHistoryEntries', () => {
   });
 
   it('handles an empty file', async () => {
-    const file = path.join(dir, MetricsHistoryWriter.FILENAME);
+    const file = path.join(dir, METRICS_HISTORY_FILENAME);
     await fs.writeFile(file, '', 'utf-8');
     expect(await readHistoryEntries(dir)).toEqual([]);
   });
 
   describe('scope filtering', () => {
     async function seed(): Promise<void> {
-      const file = path.join(dir, MetricsHistoryWriter.FILENAME);
+      const file = path.join(dir, METRICS_HISTORY_FILENAME);
       await fs.writeFile(
         file,
         [

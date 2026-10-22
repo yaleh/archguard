@@ -13,8 +13,8 @@
  * @version 2.0.0
  */
 
-import { ArchJSONAggregator } from '@/parser/archjson-aggregator.js';
-import { MetricsCalculator } from '@/parser/metrics-calculator.js';
+import { aggregateArchJSON } from '@/parser/archjson-aggregator.js';
+import { calculateMetrics } from '@/parser/metrics-calculator.js';
 import type { ParseCache } from '@/parser/parse-cache.js';
 import type { ParseWorkerPool } from '@/parser/parse-worker-pool.js';
 import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
@@ -148,8 +148,8 @@ export class DiagramProcessor {
     this.runner =
       options.runner ??
       new DiagramPipelineRunner(
-        new ArchJSONAggregator(),
-        new MetricsCalculator(),
+        aggregateArchJSON,
+        calculateMetrics,
         this.router,
         options.globalConfig,
         options.progress
