@@ -16,9 +16,9 @@ extra:
 
 ## AC
 
-- [ ] `normalizeEntityName` / `isNoisyTarget` / `shouldIncludeMember` / `getVisibilitySymbol` / `sanitizeType` 等格式无关函数在 `src/` 下只剩一份定义（`grep -rn "export function normalizeEntityName" src/` 仅 1 处，其余同名同理）
-- [ ] `generateMemberLine` / `generateRelationLine` / `generateClassDefinition` 的格式差异（`{static}` vs `static`、别名映射类型）通过参数/策略注入，不再复制整函数体
-- [ ] `npm test -- --run tests/unit/mermaid/generator-formatting.test.ts tests/unit/mermaid/generator-formatting-pure.test.ts tests/unit/plantuml/generator.test.ts` 全绿，输出与现状等价（golden/现有断言不变）
+- [x] `normalizeEntityName` / `isNoisyTarget` / `shouldIncludeMember` / `getVisibilitySymbol` / `sanitizeType` 等格式无关函数在 `src/` 下只剩一份定义（`grep -rn "export function normalizeEntityName" src/` 仅 1 处，其余同名同理）
+- [x] `generateMemberLine` / `generateRelationLine` / `generateClassDefinition` 的格式差异（`{static}` vs `static`、别名映射类型）通过参数/策略注入，不再复制整函数体
+- [x] `npm test -- --run tests/unit/mermaid/generator-formatting.test.ts tests/unit/mermaid/generator-formatting-pure.test.ts tests/unit/plantuml/generator.test.ts` 全绿，输出与现状等价（golden/现有断言不变）
 
 ## DoD
 
