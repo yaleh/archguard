@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
+import { createLanguagePlugin } from '@/plugins/plugin-factory.js';
 import { GoPlugin } from '@/plugins/golang/index.js';
 import { JavaPlugin } from '@/plugins/java/index.js';
 import { PythonPlugin } from '@/plugins/python/index.js';

@@ -1,6 +1,6 @@
 import type { ILanguagePlugin } from '@/core/interfaces/language-plugin.js';
-import type { ParserLanguage } from './parser-backend.js';
-import { selectParserBackendFor, type SelectParserBackendOptions } from './parser-runtime.js';
+import type { ParserLanguage } from './shared/parser-backend.js';
+import { selectParserBackendFor, type SelectParserBackendOptions } from './shared/parser-runtime.js';
 
 /** Construct a Tree-sitter language plugin with its resolver-selected backend. */
 export async function createLanguagePlugin(

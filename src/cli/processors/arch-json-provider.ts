@@ -29,7 +29,7 @@ import {
   runtimeDiagnosticVisible,
   type SelectParserBackendOptions,
 } from '@/plugins/shared/parser-runtime.js';
-import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
+import { createLanguagePlugin } from '@/plugins/plugin-factory.js';
 import type { ParseWorkerPool } from '@/parser/parse-worker-pool.js';
 import type { ParserRuntimeKind } from '@/plugins/shared/syntax-tree.js';
 import path from 'path';

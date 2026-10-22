@@ -9,7 +9,7 @@ const PLUGIN_MODULE_FILES = new Set(
     path.resolve(`src/plugins/${language}/index.ts`)
   )
 );
-const FACTORY = path.resolve('src/plugins/shared/plugin-factory.ts');
+const FACTORY = path.resolve('src/plugins/plugin-factory.ts');
 const temporaryDirectories: string[] = [];
 
 function sourceFiles(root: string): string[] {

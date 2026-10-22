@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
+import { createLanguagePlugin } from '@/plugins/plugin-factory.js';
 import { selectParserBackendFor } from '@/plugins/shared/parser-runtime.js';
 import type { ParserBackend } from '@/plugins/shared/parser-backend.js';
 

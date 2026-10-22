@@ -39,7 +39,7 @@ import {
   selectParserBackendFor,
   type SelectParserBackendOptions,
 } from '@/plugins/shared/parser-runtime.js';
-import { createLanguagePlugin } from '@/plugins/shared/plugin-factory.js';
+import { createLanguagePlugin } from '@/plugins/plugin-factory.js';
 import { ProcessParseWorkerPools } from '@/parser/process-parse-worker-pools.js';
 import type { ParseWorkerLanguage } from '@/parser/parse-worker-pool.js';
 import type { ArchJSON } from '@/types/index.js';
