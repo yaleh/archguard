@@ -793,7 +793,7 @@ async function handleClusterBoundary(opts: QueryOptions): Promise<void> {
 
   const matrix = buildAdjacencyMatrix(archJson);
   const entityNames = archJson.entities.map((e) => e.name);
-  const report = ClusterBoundaryAnalyzer.analyze(matrix, entityNames);
+  const report = new ClusterBoundaryAnalyzer(matrix, entityNames).analyze();
 
   console.log(JSON.stringify(report, null, 2));
 }

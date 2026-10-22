@@ -70,15 +70,29 @@ function nearestCentroid(point: number[], centroids: number[][]): number {
 }
 
 export class KMeansClusterer {
+  private readonly matrix: number[][];
+  private readonly options: KMeansOptions;
+
   /**
-   * Cluster an n×d feature matrix, selecting K by Silhouette over the window
-   * `[max(2, kInit−2), kInit+3]`.
+   * Hold the point set and K/seed options for one clustering run.
    *
    * @param matrix - Row-major feature matrix (may contain all-zero orphan rows).
-   * @param options - KMeansOptions.
+   * @param options - KMeansOptions (K window base, seed, iteration caps).
+   */
+  constructor(matrix: number[][], options: KMeansOptions = {}) {
+    this.matrix = matrix;
+    this.options = options;
+  }
+
+  /**
+   * Cluster the held feature matrix, selecting K by Silhouette over the window
+   * `[max(2, kInit−2), kInit+3]`.
+   *
    * @returns Deterministic KMeansResult.
    */
-  static cluster(matrix: number[][], options: KMeansOptions = {}): KMeansResult {
+  cluster(): KMeansResult {
+    const matrix = this.matrix;
+    const options = this.options;
     const seed = options.seed ?? DEFAULT_SEED;
     const maxIterations = options.maxIterations ?? DEFAULT_MAX_ITERATIONS;
     const convergenceThreshold = options.convergenceThreshold ?? DEFAULT_CONVERGENCE_THRESHOLD;
@@ -130,7 +144,7 @@ export class KMeansClusterer {
     const kRange: number[] = [];
     for (let k = minK; k <= maxK; k++) kRange.push(k);
 
-    const selected = this.selectK(clean, kRange, {
+    const selected = KMeansClusterer.selectK(clean, kRange, {
       maxIterations,
       convergenceThreshold,
       seed,

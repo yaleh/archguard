@@ -50,7 +50,7 @@ export class FileError extends Error {
   }
 }
 
-export interface ErrorFormatOptions {
+export interface ErrorHandlerOptions {
   color?: boolean;
   verbose?: boolean;
 }
@@ -64,13 +64,25 @@ export interface ErrorFormatOptions {
  * - Verbose mode with stack traces
  * - Error location display (file:line:column)
  * - API error code interpretation
+ *
+ * Display context (`color`, `verbose`) is injected once at construction and
+ * held by the instance; `format()` only carries the error itself.
  */
 export class ErrorHandler {
+  private readonly color: boolean;
+  private readonly verbose: boolean;
+
+  constructor(options: ErrorHandlerOptions = {}) {
+    this.color = options.color ?? true;
+    this.verbose = options.verbose ?? false;
+  }
+
   /**
    * Format any error for display
    */
-  format(error: unknown, options: ErrorFormatOptions = {}): string {
-    const { color = true, verbose = false } = options;
+  format(error: unknown): string {
+    const color = this.color;
+    const verbose = this.verbose;
 
     // Handle null/undefined
     if (error === null || error === undefined) {

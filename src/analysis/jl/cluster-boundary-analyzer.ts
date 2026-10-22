@@ -38,6 +38,31 @@ function round4(value: number): number {
 }
 
 export class BoundaryAlignmentScorer {
+  private readonly entities: string[];
+  private readonly assignments: number[];
+  private readonly options: ClusterBoundaryOptions;
+  private readonly packages?: string[];
+
+  /**
+   * Hold the clustered snapshot (entity names + cluster assignments) and the
+   * package grouping for scoring.
+   *
+   * `entities[i]` is the name of the entity whose cluster is `assignments[i]`
+   * (already the clustered, orphan-free subset). When `packages` is given
+   * (`packages[i]` ↔ `entities[i]`) it replaces the name-prefix split.
+   */
+  constructor(
+    entities: string[],
+    assignments: number[],
+    options: ClusterBoundaryOptions = {},
+    packages?: string[]
+  ) {
+    this.entities = entities;
+    this.assignments = assignments;
+    this.options = options;
+    this.packages = packages;
+  }
+
   /**
    * Extract a package prefix from an entity name.
    *
@@ -56,19 +81,15 @@ export class BoundaryAlignmentScorer {
   }
 
   /**
-   * Compute per-package purity / coverage / BAS from cluster assignments.
-   *
-   * `entities[i]` is the name of the entity whose cluster is `assignments[i]`
-   * (already the clustered, orphan-free subset). Packages with fewer than
-   * `minPackageSize` entities are omitted. When `packages` is given
-   * (`packages[i]` ↔ `entities[i]`) it replaces the name-prefix split.
+   * Compute per-package purity / coverage / BAS from the held cluster
+   * assignments. Packages with fewer than `minPackageSize` entities are
+   * omitted.
    */
-  static score(
-    entities: string[],
-    assignments: number[],
-    options: ClusterBoundaryOptions = {},
-    packages?: string[]
-  ): PackageBASScore[] {
+  score(): PackageBASScore[] {
+    const entities = this.entities;
+    const assignments = this.assignments;
+    const options = this.options;
+    const packages = this.packages;
     const depth = options.packageDepth ?? DEFAULT_PACKAGE_DEPTH;
     const minSize = options.minPackageSize ?? DEFAULT_MIN_PACKAGE_SIZE;
 
@@ -78,7 +99,7 @@ export class BoundaryAlignmentScorer {
 
     const pkgToEntities = new Map<string, number[]>();
     for (let i = 0; i < entities.length; i++) {
-      const pkg = packages?.[i] ?? this.extractPackage(entities[i], depth);
+      const pkg = packages?.[i] ?? BoundaryAlignmentScorer.extractPackage(entities[i], depth);
       const list = pkgToEntities.get(pkg) ?? [];
       list.push(i);
       pkgToEntities.set(pkg, list);
@@ -120,7 +141,7 @@ export class BoundaryAlignmentScorer {
   }
 
   /** Entity-count-weighted mean of per-package BAS. */
-  static globalBAS(scores: PackageBASScore[]): number {
+  globalBAS(scores: PackageBASScore[]): number {
     let weighted = 0;
     let total = 0;
     for (const s of scores) {
@@ -132,10 +153,13 @@ export class BoundaryAlignmentScorer {
 }
 
 export class ClusterBoundaryAnalyzer {
+  private readonly matrix: number[][];
+  private readonly entityNames: string[];
+  private readonly options: ClusterBoundaryOptions;
+  private readonly packageOf?: string[];
+
   /**
-   * Run the full single-snapshot cluster-boundary analysis: remove orphans,
-   * (optionally) JL-project, cluster with K-Means, score packages, and detect
-   * splits / fusions.
+   * Hold the snapshot to analyze.
    *
    * @param matrix - Row-major weighted adjacency matrix (row i ↔ entityNames[i]).
    * @param entityNames - Entity names aligned with matrix rows.
@@ -143,14 +167,31 @@ export class ClusterBoundaryAnalyzer {
    * @param packageOf - Optional package key per entity (aligned with
    *   `entityNames`), e.g. the entity's source directory. When omitted the
    *   package is the dotted-name prefix of `entityNames[i]` (Java/Go convention).
-   * @returns ClusterBoundaryReport (single snapshot, nothing persisted).
    */
-  static analyze(
+  constructor(
     matrix: number[][],
     entityNames: string[],
     options: ClusterBoundaryOptions = {},
     packageOf?: string[]
-  ): ClusterBoundaryReport {
+  ) {
+    this.matrix = matrix;
+    this.entityNames = entityNames;
+    this.options = options;
+    this.packageOf = packageOf;
+  }
+
+  /**
+   * Run the full single-snapshot cluster-boundary analysis: remove orphans,
+   * (optionally) JL-project, cluster with K-Means, score packages, and detect
+   * splits / fusions.
+   *
+   * @returns ClusterBoundaryReport (single snapshot, nothing persisted).
+   */
+  analyze(): ClusterBoundaryReport {
+    const matrix = this.matrix;
+    const entityNames = this.entityNames;
+    const options = this.options;
+    const packageOf = this.packageOf;
     const includeOrphans = options.includeOrphans ?? DEFAULT_INCLUDE_ORPHANS;
     const depth = options.packageDepth ?? DEFAULT_PACKAGE_DEPTH;
     const seed = options.seed ?? DEFAULT_SEED;
@@ -208,17 +249,13 @@ export class ClusterBoundaryAnalyzer {
 
     // 4. Cluster. Orphans were already removed, so the clusterer finds none and
     //    `assignments[i]` aligns with `cleanNames[i]`.
-    const km = KMeansClusterer.cluster(featureMatrix, { kInit, seed });
+    const km = new KMeansClusterer(featureMatrix, { kInit, seed }).cluster();
     const assignments = km.assignments;
 
     // 5. Per-package scores + system-level BAS.
-    const packageScores = BoundaryAlignmentScorer.score(
-      cleanNames,
-      assignments,
-      options,
-      cleanPackages
-    );
-    const globalBAS = BoundaryAlignmentScorer.globalBAS(packageScores);
+    const scorer = new BoundaryAlignmentScorer(cleanNames, assignments, options, cleanPackages);
+    const packageScores = scorer.score();
+    const globalBAS = scorer.globalBAS(packageScores);
 
     const report: ClusterBoundaryReport = {
       mode,
@@ -228,13 +265,13 @@ export class ClusterBoundaryAnalyzer {
       entityCount: cleanNames.length,
       packageCount: distinctPackages.size,
       packageScores,
-      splitPackages: this.detectSplitPackages(
+      splitPackages: ClusterBoundaryAnalyzer.detectSplitPackages(
         packageScores,
         assignments,
         cleanPackages,
         splitThreshold
       ),
-      crossDomainFusions: this.detectCrossDomainFusions(
+      crossDomainFusions: ClusterBoundaryAnalyzer.detectCrossDomainFusions(
         assignments,
         cleanNames,
         cleanPackages,
@@ -242,7 +279,7 @@ export class ClusterBoundaryAnalyzer {
         dominantCoverageThreshold
       ),
       orphanEntities: includeOrphans ? orphanEntities : [],
-      clusters: this.buildClusterSummaries(assignments, cleanPackages),
+      clusters: ClusterBoundaryAnalyzer.buildClusterSummaries(assignments, cleanPackages),
     };
     if (km.warning !== undefined) report.warning = km.warning;
     return report;

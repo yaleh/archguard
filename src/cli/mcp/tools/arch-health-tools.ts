@@ -415,7 +415,12 @@ export function buildClusterBoundaryReport(
 ): ClusterBoundaryReport {
   const matrix = buildAdjacencyMatrix(archJson, { resolveByName: true });
   const entityNames = archJson.entities.map((e) => e.name);
-  return ClusterBoundaryAnalyzer.analyze(matrix, entityNames, options, derivePackageOf(archJson));
+  return new ClusterBoundaryAnalyzer(
+    matrix,
+    entityNames,
+    options,
+    derivePackageOf(archJson)
+  ).analyze();
 }
 
 /**
