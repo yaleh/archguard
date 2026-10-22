@@ -1,7 +1,7 @@
 ---
 id: gap-demote-pure-processing-classes
 title: 把 ~17 个 class-as-function 的纯处理类降级为模块函数或并入调用方
-status: todo
+status: ready
 labels:
   - gap
   - refactor
