@@ -16,9 +16,9 @@ extra:
 
 ## AC
 
-- [ ] `ErrorHandler` 在构造时注入 `verbose`（如 `new ErrorHandler({ verbose })`），`format()` 不再每次传 `verbose`；`tests/unit/cli/error-handler.test.ts` 绿，现有调用点同步更新
-- [ ] `ClusterBoundaryAnalyzer` 与 `BoundaryAlignmentScorer` 构造时注入距离/邻接矩阵并持有，方法不再每次传矩阵；`tests/unit/analysis/jl/cluster-boundary-analyzer.test.ts` 绿
-- [ ] `KMeansClusterer` 构造时注入 `k` 与点集（或等价状态），`cluster()` 不再每次传全部参数；`tests/unit/analysis/jl/kmeans.test.ts` 绿
+- [x] `ErrorHandler` 在构造时注入 `verbose`（如 `new ErrorHandler({ verbose })`），`format()` 不再每次传 `verbose`；`tests/unit/cli/error-handler.test.ts` 绿，现有调用点同步更新
+- [x] `ClusterBoundaryAnalyzer` 与 `BoundaryAlignmentScorer` 构造时注入距离/邻接矩阵并持有，方法不再每次传矩阵；`tests/unit/analysis/jl/cluster-boundary-analyzer.test.ts` 绿
+- [x] `KMeansClusterer` 构造时注入 `k` 与点集（或等价状态），`cluster()` 不再每次传全部参数；`tests/unit/analysis/jl/kmeans.test.ts` 绿
 
 ## DoD
 
@@ -29,6 +29,9 @@ extra:
 - src/cli/errors/index.ts
 - src/analysis/jl/cluster-boundary-analyzer.ts
 - src/analysis/jl/kmeans.ts
+- src/cli/commands/analyze.ts
+- src/cli/commands/query.ts
+- src/cli/mcp/tools/arch-health-tools.ts
 - tests/unit/cli/error-handler.test.ts
 - tests/unit/analysis/jl/cluster-boundary-analyzer.test.ts
 - tests/unit/analysis/jl/kmeans.test.ts
