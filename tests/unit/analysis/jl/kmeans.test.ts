@@ -43,7 +43,7 @@ function uniformPoints(n: number, d: number, seed: number): number[][] {
 describe('KMeansClusterer', () => {
   it('two separated 2D clusters → Silhouette > 0.8 and correct partition', () => {
     const matrix = twoSeparatedClusters();
-    const result = KMeansClusterer.cluster(matrix, { kInit: 2, seed: 42 });
+    const result = new KMeansClusterer(matrix, { kInit: 2, seed: 42 }).cluster();
     expect(result.silhouetteScore).toBeGreaterThan(0.8);
     expect(result.k).toBe(2);
 
@@ -57,15 +57,23 @@ describe('KMeansClusterer', () => {
 
   it('uniform random points → Silhouette < 0.2 + "no clear cluster structure" warning', () => {
     const matrix = uniformPoints(60, 10, 12345);
-    const result = KMeansClusterer.cluster(matrix, { kInit: 2, seed: 7 });
+    const result = new KMeansClusterer(matrix, { kInit: 2, seed: 7 }).cluster();
     expect(result.silhouetteScore).toBeLessThan(0.2);
     expect(result.warning).toBe('no clear cluster structure detected');
   });
 
+  it('holds the injected point set and options across cluster() calls', () => {
+    const clusterer = new KMeansClusterer(twoSeparatedClusters(), { kInit: 2, seed: 42 });
+    const r1 = clusterer.cluster();
+    const r2 = clusterer.cluster();
+    expect(r2.assignments).toEqual(r1.assignments);
+    expect(r2.silhouetteScore).toBe(r1.silhouetteScore);
+  });
+
   it('determinism: bit-identical assignments for the same input and seed', () => {
     const matrix = twoSeparatedClusters();
-    const r1 = KMeansClusterer.cluster(matrix, { kInit: 2, seed: 42 });
-    const r2 = KMeansClusterer.cluster(matrix, { kInit: 2, seed: 42 });
+    const r1 = new KMeansClusterer(matrix, { kInit: 2, seed: 42 }).cluster();
+    const r2 = new KMeansClusterer(matrix, { kInit: 2, seed: 42 }).cluster();
     expect(r2.assignments).toEqual(r1.assignments);
     expect(r2.centroids).toEqual(r1.centroids);
     expect(r2.silhouetteScore).toBe(r1.silhouetteScore);
@@ -74,7 +82,7 @@ describe('KMeansClusterer', () => {
 
   it('zero-rows → orphanIndices and excluded from assignments', () => {
     const matrix = [...twoSeparatedClusters(), [0, 0], [0, 0]];
-    const result = KMeansClusterer.cluster(matrix, { kInit: 2, seed: 42 });
+    const result = new KMeansClusterer(matrix, { kInit: 2, seed: 42 }).cluster();
     expect(result.orphanIndices).toEqual([20, 21]);
     expect(result.assignments).toHaveLength(20);
     expect(result.entityIndices).toEqual(Array.from({ length: 20 }, (_, i) => i));
@@ -95,7 +103,7 @@ describe('KMeansClusterer', () => {
       ...clusterAround([10, 0], A_OFFSETS),
       ...clusterAround([0, 10], A_OFFSETS),
     ];
-    const result = KMeansClusterer.cluster(matrix, { kInit: 3, seed: 42 });
+    const result = new KMeansClusterer(matrix, { kInit: 3, seed: 42 }).cluster();
     expect(result.k).toBe(3);
     // Each cluster holds exactly one group of 10.
     const counts = new Map<number, number>();
@@ -106,11 +114,11 @@ describe('KMeansClusterer', () => {
 
   it('maxIterations guard → converged: false with a 1-iteration cap, true by default', () => {
     const matrix = twoSeparatedClusters();
-    const capped = KMeansClusterer.cluster(matrix, { kInit: 2, seed: 42, maxIterations: 1 });
+    const capped = new KMeansClusterer(matrix, { kInit: 2, seed: 42, maxIterations: 1 }).cluster();
     expect(capped.converged).toBe(false);
     expect(capped.iterations).toBe(1);
 
-    const full = KMeansClusterer.cluster(matrix, { kInit: 2, seed: 42 });
+    const full = new KMeansClusterer(matrix, { kInit: 2, seed: 42 }).cluster();
     expect(full.converged).toBe(true);
   });
 
@@ -121,7 +129,7 @@ describe('KMeansClusterer', () => {
       [10, 0],
       [0, 10],
     ];
-    const result = KMeansClusterer.cluster(matrix, { kInit: 100, seed: 42 });
+    const result = new KMeansClusterer(matrix, { kInit: 100, seed: 42 }).cluster();
     expect(result.k).toBe(3);
     expect(result.assignments).toHaveLength(3);
     expect(new Set(result.assignments).size).toBe(3);
@@ -141,8 +149,8 @@ describe('KMeansClusterer', () => {
         matrix.push([center[0] + (i % 5) * 0.1, center[1] + (i % 7) * 0.1]);
       }
     }
-    const r1 = KMeansClusterer.cluster(matrix, { kInit: 5, seed: 42 });
-    const r2 = KMeansClusterer.cluster(matrix, { kInit: 5, seed: 42 });
+    const r1 = new KMeansClusterer(matrix, { kInit: 5, seed: 42 }).cluster();
+    const r2 = new KMeansClusterer(matrix, { kInit: 5, seed: 42 }).cluster();
     expect(r1.k).toBe(r2.k);
     expect(r1.silhouetteScore).toBe(r2.silhouetteScore);
     expect(r2.assignments).toEqual(r1.assignments);

@@ -99,6 +99,14 @@ function dominantFixture(): { entities: string[]; matrix: number[][] } {
 // ---------------------------------------------------------------------------
 
 describe('BoundaryAlignmentScorer', () => {
+  it('holds entities/assignments injected at construction', () => {
+    const scorer = new BoundaryAlignmentScorer(['a.core.X1', 'a.core.X2'], [0, 0], {
+      minPackageSize: 1,
+    });
+    expect(scorer.score()).toEqual(scorer.score());
+    expect(scorer.score()[0].purity).toBe(1.0);
+  });
+
   it('extractPackage honours packageDepth (2 → two segments, 1 → one)', () => {
     const name = 'cli.commands.analyze.AnalyzeCommand';
     expect(BoundaryAlignmentScorer.extractPackage(name, 2)).toBe('cli.commands');
@@ -107,9 +115,9 @@ describe('BoundaryAlignmentScorer', () => {
   });
 
   it('purity = 1.0 / BAS = 1.0 when a package dominates its cluster', () => {
-    const scores = BoundaryAlignmentScorer.score(['a.core.X1', 'a.core.X2'], [0, 0], {
+    const scores = new BoundaryAlignmentScorer(['a.core.X1', 'a.core.X2'], [0, 0], {
       minPackageSize: 1,
-    });
+    }).score();
     expect(scores).toHaveLength(1);
     expect(scores[0].purity).toBe(1.0);
     expect(scores[0].coverage).toBe(1.0);
@@ -119,22 +127,24 @@ describe('BoundaryAlignmentScorer', () => {
   it('purity = 0.25 when a package is split evenly across K=4 clusters', () => {
     const entities = Array.from({ length: 8 }, (_, i) => `a.core.E${i}`);
     const assignments = [0, 0, 1, 1, 2, 2, 3, 3];
-    const scores = BoundaryAlignmentScorer.score(entities, assignments, { minPackageSize: 1 });
+    const scores = new BoundaryAlignmentScorer(entities, assignments, {
+      minPackageSize: 1,
+    }).score();
     expect(scores[0].purity).toBe(0.25);
   });
 
   it('single-entity package → purity 1.0 (never split)', () => {
-    const scores = BoundaryAlignmentScorer.score(['a.core.Solo'], [0], { minPackageSize: 1 });
+    const scores = new BoundaryAlignmentScorer(['a.core.Solo'], [0], { minPackageSize: 1 }).score();
     expect(scores[0].purity).toBe(1.0);
     expect(scores[0].entityCount).toBe(1);
   });
 
   it('minPackageSize filter omits small packages', () => {
-    const scores = BoundaryAlignmentScorer.score(
+    const scores = new BoundaryAlignmentScorer(
       ['a.core.A', 'a.core.B', 'a.core.C', 'b.other.Lone'],
       [0, 0, 0, 1],
       { minPackageSize: 3 }
-    );
+    ).score();
     expect(scores.map((s) => s.packageName)).toEqual(['a.core']);
   });
 
@@ -143,17 +153,20 @@ describe('BoundaryAlignmentScorer', () => {
     // expected = (2·1.0 + 4·0.75) / 6 = 5/6 = 0.8333
     const entities = ['a.core.A1', 'a.core.A2', 'b.core.B1', 'b.core.B2', 'b.core.B3', 'b.core.B4'];
     const assignments = [0, 0, 1, 1, 2, 2];
-    const scores = BoundaryAlignmentScorer.score(entities, assignments, { minPackageSize: 1 });
+    const scorer = new BoundaryAlignmentScorer(entities, assignments, { minPackageSize: 1 });
+    const scores = scorer.score();
     const byName = new Map(scores.map((s) => [s.packageName, s]));
     expect(byName.get('a.core')?.bas).toBe(1.0);
     expect(byName.get('b.core')?.bas).toBe(0.75);
-    expect(BoundaryAlignmentScorer.globalBAS(scores)).toBeCloseTo(5 / 6, 4);
+    expect(scorer.globalBAS(scores)).toBeCloseTo(5 / 6, 4);
   });
 
   it('all scores stay in [0,1]', () => {
     const entities = ['a.core.A1', 'a.core.A2', 'a.core.A3', 'b.core.B1', 'b.core.B2', 'c.core.C1'];
     const assignments = [0, 0, 1, 1, 2, 2];
-    const scores = BoundaryAlignmentScorer.score(entities, assignments, { minPackageSize: 1 });
+    const scores = new BoundaryAlignmentScorer(entities, assignments, {
+      minPackageSize: 1,
+    }).score();
     for (const s of scores) {
       expect(s.purity).toBeGreaterThanOrEqual(0);
       expect(s.purity).toBeLessThanOrEqual(1);
@@ -172,7 +185,7 @@ describe('BoundaryAlignmentScorer', () => {
 describe('ClusterBoundaryAnalyzer', () => {
   it('integration: 3 packages × 20 entities → globalBAS 1.0, no splits/fusions', () => {
     const { entities, matrix } = alignedFixture();
-    const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 });
+    const report = new ClusterBoundaryAnalyzer(matrix, entities, { seed: 42 }).analyze();
     expect(report.mode).toBe('direct');
     expect(report.entityCount).toBe(60);
     expect(report.packageCount).toBe(3);
@@ -193,7 +206,7 @@ describe('ClusterBoundaryAnalyzer', () => {
 
   it('split-package detector: purity < 0.5 && size ≥ 3 → flagged; small split not', () => {
     const { entities, matrix } = splitFixture();
-    const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 });
+    const report = new ClusterBoundaryAnalyzer(matrix, entities, { seed: 42 }).analyze();
     const split = report.splitPackages.find((s) => s.packageName === 'aa.core');
     expect(split).toBeDefined();
     expect(split.purity).toBeLessThan(0.5);
@@ -209,16 +222,16 @@ describe('ClusterBoundaryAnalyzer', () => {
     // 2 entities of pkgA in different clusters → purity 0.5 but size 2 < 3.
     const entities = ['aa.core.S1', 'aa.core.S2', 'bb.core.A1', 'bb.core.B1'];
     const matrix = [rowFor(0, 2), rowFor(1, 2), rowFor(0, 2), rowFor(1, 2)];
-    const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, {
+    const report = new ClusterBoundaryAnalyzer(matrix, entities, {
       seed: 42,
       minPackageSize: 3,
-    });
+    }).analyze();
     expect(report.splitPackages.some((s) => s.packageName === 'aa.core')).toBe(false);
   });
 
   it('cross-domain fusion: mixed 2/2/2 cluster flagged; package-private clusters not', () => {
     const { entities, matrix } = fusionFixture();
-    const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 });
+    const report = new ClusterBoundaryAnalyzer(matrix, entities, { seed: 42 }).analyze();
     expect(report.crossDomainFusions.length).toBeGreaterThanOrEqual(1);
     const fusion = report.crossDomainFusions.find((f) => f.representativeEntities.length === 6);
     expect(fusion).toBeDefined();
@@ -232,7 +245,7 @@ describe('ClusterBoundaryAnalyzer', () => {
 
   it('cross-domain fusion: 80% single-dominant cluster is NOT flagged', () => {
     const { entities, matrix } = dominantFixture();
-    const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 });
+    const report = new ClusterBoundaryAnalyzer(matrix, entities, { seed: 42 }).analyze();
     // The 10-entity cluster is 80% aa.core → dominant coverage 0.8 ≥ 0.5.
     expect(report.crossDomainFusions).toEqual([]);
   });
@@ -240,28 +253,30 @@ describe('ClusterBoundaryAnalyzer', () => {
   it('orphan detector: zero rows listed under includeOrphans; empty when false (still excluded)', () => {
     const entities = ['aa.core.A1', 'aa.core.A2', 'aa.core.A3', 'zz.isolated.Orphan'];
     const matrix = [rowFor(0, 2), rowFor(0, 2), rowFor(0, 2), [0, 0]];
-    const withOrphans = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 });
+    const withOrphans = new ClusterBoundaryAnalyzer(matrix, entities, { seed: 42 }).analyze();
     expect(withOrphans.orphanEntities).toEqual(['zz.isolated.Orphan']);
     expect(withOrphans.entityCount).toBe(3);
     expect(withOrphans.packageScores.map((s) => s.packageName)).not.toContain('zz.isolated');
 
-    const withoutOrphans = ClusterBoundaryAnalyzer.analyze(matrix, entities, {
+    const withoutOrphans = new ClusterBoundaryAnalyzer(matrix, entities, {
       seed: 42,
       includeOrphans: false,
-    });
+    }).analyze();
     expect(withoutOrphans.orphanEntities).toEqual([]);
   });
 
   it('errors on fewer than 2 non-orphan entities', () => {
     const entities = ['a.core.Solo'];
     const matrix = [[1, 0]];
-    expect(() => ClusterBoundaryAnalyzer.analyze(matrix, entities)).toThrow();
+    expect(() => new ClusterBoundaryAnalyzer(matrix, entities).analyze()).toThrow();
   });
 
   it('errors on entity/matrix length mismatch', () => {
     const entities = ['a.core.A1', 'a.core.A2'];
     const matrix = [[1, 0]];
-    expect(() => ClusterBoundaryAnalyzer.analyze(matrix, entities)).toThrow(/length mismatch/);
+    expect(() => new ClusterBoundaryAnalyzer(matrix, entities).analyze()).toThrow(
+      /length mismatch/
+    );
   });
 });
 
@@ -283,7 +298,7 @@ describe('ClusterBoundaryAnalyzer — packageOf (TASK-96)', () => {
 
   it('groups by packageOf: packageCount = distinct directories, not entity count', () => {
     const { entities, matrix, packageOf } = undottedFixture();
-    const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 }, packageOf);
+    const report = new ClusterBoundaryAnalyzer(matrix, entities, { seed: 42 }, packageOf).analyze();
     expect(report.entityCount).toBe(18);
     expect(report.packageCount).toBe(3);
     expect(report.globalBAS).toBe(1.0);
@@ -294,18 +309,23 @@ describe('ClusterBoundaryAnalyzer — packageOf (TASK-96)', () => {
 
   it('without packageOf, undotted names each become their own package (pre-fix behaviour)', () => {
     const { entities, matrix } = undottedFixture();
-    const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 });
+    const report = new ClusterBoundaryAnalyzer(matrix, entities, { seed: 42 }).analyze();
     expect(report.packageCount).toBe(entities.length);
     expect(report.globalBAS).toBe(0);
   });
 
   it('omitting packageOf is identical to the name-prefix split (regression)', () => {
     const { entities, matrix } = alignedFixture();
-    const implicit = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 });
-    const explicit = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 }, undefined);
+    const implicit = new ClusterBoundaryAnalyzer(matrix, entities, { seed: 42 }).analyze();
+    const explicit = new ClusterBoundaryAnalyzer(
+      matrix,
+      entities,
+      { seed: 42 },
+      undefined
+    ).analyze();
     expect(explicit).toEqual(implicit);
     const named = entities.map((n) => BoundaryAlignmentScorer.extractPackage(n, 2));
-    expect(ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 }, named)).toEqual(
+    expect(new ClusterBoundaryAnalyzer(matrix, entities, { seed: 42 }, named).analyze()).toEqual(
       implicit
     );
   });
@@ -315,7 +335,7 @@ describe('ClusterBoundaryAnalyzer — packageOf (TASK-96)', () => {
     entities.unshift('lonelyFn');
     packageOf.unshift('orphanDir');
     matrix.unshift([0, 0, 0]);
-    const report = ClusterBoundaryAnalyzer.analyze(matrix, entities, { seed: 42 }, packageOf);
+    const report = new ClusterBoundaryAnalyzer(matrix, entities, { seed: 42 }, packageOf).analyze();
     expect(report.orphanEntities).toEqual(['lonelyFn']);
     expect(report.packageCount).toBe(3);
     expect(report.globalBAS).toBe(1.0);
@@ -323,7 +343,7 @@ describe('ClusterBoundaryAnalyzer — packageOf (TASK-96)', () => {
 
   it('errors when packageOf length does not match entityNames', () => {
     const { entities, matrix } = undottedFixture();
-    expect(() => ClusterBoundaryAnalyzer.analyze(matrix, entities, {}, ['only-one'])).toThrow(
+    expect(() => new ClusterBoundaryAnalyzer(matrix, entities, {}, ['only-one']).analyze()).toThrow(
       /length mismatch/
     );
   });
