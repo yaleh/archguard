@@ -1,7 +1,7 @@
 ---
 id: gap-enrich-stateless-classes-with-state
 title: ErrorHandler / ClusterBoundaryAnalyzer / KMeansClusterer 反向富化：构造时注入并持有状态
-status: todo
+status: ready
 labels:
   - gap
   - refactor
