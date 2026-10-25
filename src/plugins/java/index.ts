@@ -310,7 +310,7 @@ export class JavaPlugin implements ILanguagePlugin {
   extractTestStructure(
     filePath: string,
     code: string,
-    _patternConfig?: TestPatternConfig
+    patternConfig?: TestPatternConfig
   ): RawTestFile | null {
     // Detect frameworks
     const hasJUnit5 = /import\s+org\.junit\.jupiter\.api\b/.test(code);
@@ -361,10 +361,19 @@ export class JavaPlugin implements ILanguagePlugin {
 
     if (testCases.length === 0) return null;
 
-    // Count total assertions and distribute evenly
-    const assertionTotal = this.countJavaAssertions(code);
-    const perCase = testCases.length > 0 ? Math.round(assertionTotal / testCases.length) : 0;
-    for (const tc of testCases) tc.assertionCount = perCase;
+    // Count total assertions across the whole file (JUnit/AssertJ + Mockito + custom patterns).
+    const assertionTotal = this.countJavaAssertions(code, patternConfig);
+
+    // Distribute assertions across cases using remainder distribution to preserve the total.
+    // Math.round() would lose assertions when totalAssertions < testCases.length (e.g. 13/53→0),
+    // misclassifying assertion-bearing files as zero-assertion 'debug' tests.
+    if (assertionTotal > 0) {
+      const base = Math.floor(assertionTotal / testCases.length);
+      const remainder = assertionTotal % testCases.length;
+      for (let i = 0; i < testCases.length; i++) {
+        testCases[i].assertionCount = base + (i < remainder ? 1 : 0);
+      }
+    }
 
     const isBenchmark = hasJMH || /benchmark|bench/i.test(path.basename(filePath, '.java'));
     const testTypeHint: RawTestFile['testTypeHint'] = isBenchmark ? 'performance' : 'unit';
@@ -375,7 +384,72 @@ export class JavaPlugin implements ILanguagePlugin {
       testTypeHint,
       testCases,
       importedSourceFiles: this.extractJavaImports(code),
+      totalAssertions: assertionTotal,
+      samePackageTargets: this.inferSamePackageTargets(filePath, code),
     };
+  }
+
+  /**
+   * Same-package inference: a Java test class FooTest in package com.x (whose file
+   * lives under src/test/java/com/x/) typically tests com.x.Foo without importing it.
+   * Derive the implied FQN candidates from the class's own package + name so
+   * test coverage mapping can link tests that never import the class under test.
+   * Returns fully-qualified candidate entity ids (empty when not inferable).
+   */
+  private inferSamePackageTargets(filePath: string, code: string): string[] {
+    // Extract the test class's package declaration.
+    const pkgMatch = /^\s*package\s+([\w.]+)\s*;/m.exec(code);
+    if (!pkgMatch) return [];
+    const pkg = pkgMatch[1];
+
+    // Test class name from the filename (FooTest.java → FooTest).
+    const base = path.basename(filePath, '.java');
+    const candidates: string[] = [];
+
+    // FooTest → Foo, FooTests → Foo
+    if (/(?:Tests?)$/.test(base)) {
+      candidates.push(`${pkg}.${base.replace(/Tests?$/, '')}`);
+    }
+    // TestFoo → Foo (when the prefix is "Test" followed by an uppercase letter)
+    if (/^Test(?=[A-Z])/.test(base)) {
+      candidates.push(`${pkg}.${base.slice(4)}`);
+    }
+
+    // Same-package direct references: aggregate/Pojo tests (BeanXxxTest, FooPojoTest,
+    // UIStateBeanTest) construct or call same-package classes without importing them.
+    // Collect the simple names that are clearly referenced (new Foo, Foo.member) so the
+    // analyzer can link them to same-package entities. Only names not imported are
+    // candidates — imported classes are resolved via import matching instead.
+    const importedNames = new Set<string>();
+    for (const imp of code.matchAll(/^\s*import\s+(?:static\s+)?([\w.]+)\s*;/gm)) {
+      const segs = imp[1].split('.');
+      const last = segs[segs.length - 1];
+      if (/^[A-Z]/.test(last)) importedNames.add(last);
+    }
+    for (const ref of code.matchAll(/\bnew\s+([A-Z]\w+)\s*\(/g)) {
+      const sn = ref[1];
+      if (sn !== base && !importedNames.has(sn)) candidates.push(`${pkg}.${sn}`);
+    }
+    for (const ref of code.matchAll(/\b([A-Z]\w+)\.(?:[a-z]\w+)\s*\(/g)) {
+      const sn = ref[1];
+      if (sn !== base && !importedNames.has(sn)) candidates.push(`${pkg}.${sn}`);
+    }
+    // .class literals (Foo.class) — reflection-based contract/coverage tests that
+    // reference same-package classes without constructing or calling them.
+    for (const ref of code.matchAll(/\b([A-Z]\w+)\.class\b/g)) {
+      const sn = ref[1];
+      if (sn !== base && !importedNames.has(sn)) candidates.push(`${pkg}.${sn}`);
+    }
+    // Class.forName("com.x.Y") — contract tests that verify a fully-qualified class
+    // exists via reflection. The FQN is exact (no package inference), so link it
+    // directly when the analyzer finds a matching entity.
+    for (const ref of code.matchAll(/Class\.forName\(\s*"([\w.]+\.\w+)"\s*\)/g)) {
+      // Keep only fully-qualified names that end in a class segment (uppercase start).
+      if (/^[a-z][\w.]*\.[A-Z]\w*$/.test(ref[1])) candidates.push(ref[1]);
+    }
+
+    // The test class itself is NOT a target — filter it out if derived (defensive).
+    return [...new Set(candidates)].filter((c) => c !== `${pkg}.${base}`);
   }
 
   /**
@@ -442,7 +516,8 @@ export class JavaPlugin implements ILanguagePlugin {
     return imported;
   }
 
-  private countJavaAssertions(code: string): number {
+  private countJavaAssertions(code: string, patternConfig?: TestPatternConfig): number {
+    // JUnit / AssertJ assertion calls
     const patterns = [
       /\bAssert\.\s*assert\w+\s*\(/g,
       /\bAssertions\.\s*assert\w+\s*\(/g,
@@ -456,8 +531,34 @@ export class JavaPlugin implements ILanguagePlugin {
       /\bassertSame\s*\(/g,
       /\bassertNotSame\s*\(/g,
     ];
+    // Mockito verification / stubbing API — these are assertion-bearing calls that
+    // JUnit-only patterns would otherwise miss, misclassifying tests as zero-assertion.
+    const mockitoPatterns = [
+      /\bverify\s*\(/g,
+      /\bverifyNoMoreInteractions\s*\(/g,
+      /\bverifyZeroInteractions\s*\(/g,
+      /\bwhen\s*\(/g,
+      /\bdoReturn\s*\(/g,
+      /\bdoThrow\s*\(/g,
+      /\bdoNothing\s*\(/g,
+      /\bdoAnswer\s*\(/g,
+    ];
     let count = 0;
-    for (const pat of patterns) count += (code.match(pat) ?? []).length;
+    for (const pat of [...patterns, ...mockitoPatterns]) {
+      count += (code.match(pat) ?? []).length;
+    }
+    // Apply custom assertion patterns from patternConfig
+    if (patternConfig?.customAssertionRegexes?.length) {
+      for (const regexStr of patternConfig.customAssertionRegexes) {
+        try {
+          const regex = new RegExp(regexStr, 'g');
+          const matches = code.match(regex);
+          if (matches) count += matches.length;
+        } catch {
+          // ignore invalid regex patterns
+        }
+      }
+    }
     return count;
   }
 
