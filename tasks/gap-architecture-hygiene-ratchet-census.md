@@ -1,7 +1,7 @@
 ---
 id: gap-architecture-hygiene-ratchet-census
 title: 普查型 ratchet census：超大文件 / 模块级可变状态 / 单语句 helper 副本，只降不升
-status: ready
+status: done
 labels:
   - gap
   - architecture
