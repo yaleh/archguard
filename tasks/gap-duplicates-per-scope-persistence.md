@@ -58,8 +58,7 @@ extra:
 
 ## Triage
 
-**2026-10-26T05:58:52Z — 人 triage：suite red 是 worktree 环境问题，非实现缺陷；已修复并复跑全量绿，翻回 ready**
+**2026-10-26T05:58:52Z — 人 triage：suite red 是负载 flake，非实现缺陷、也非 node_modules 问题；翻回 ready（后经机械 fan-in 正常落地）**
 
-- 根因：worktree `node_modules` 是指向主检出的符号链接，`tests/integration/parser-pool.test.ts`（ProcessParseWorkerPools 的 worker 线程）在 worktree 里挂起/失败（5 failed：2 超时 + 3 `expected false to be true`），与本任务的 duplicates 持久化代码无关。
-- 证据：主检出真实 node_modules 下 parser-pool 6/6 过；worktree 符号链接下 5/6 红；把 worktree 的 node_modules 换成真实目录后，worktree parser-pool 6/6、全量 `bash scripts/test.sh` 387 passed | 3 skipped / 5899 passed | 18 skipped 全绿。
-- 处置：已在保留的 worktree 里把 node_modules 换成真实目录（未重跑 dispatch-worktree-setup.sh，避免换回符号链接）。
+- 根因（修正）：`tests/integration/parser-pool.test.ts` 是负载敏感集成测试——多任务同窗口并发时 flake（签名：150s 超时 + 秒红级联，5 failed：2 超时 + 3 `expected false to be true`），与本任务的 duplicates 持久化代码无关。
+- 修正说明：初版 triage 误判为「worktree node_modules 符号链接」并做了替换真实目录的动作；该替换无害（worktree 已随落地清理）但并非根因。正确处置是负载退去后重跑——standalone `npx vitest run tests/integration/parser-pool.test.ts` ~31s 6/6 绿、全量 `bash scripts/test.sh` 387 passed | 3 skipped / 5899 passed | 18 skipped 全绿即为证明。
