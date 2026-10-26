@@ -32,11 +32,3 @@ archguard 已有 `tests/unit/architecture/layer-imports.test.ts` 的硬方向守
 
 - tasks/gap-layer-ratchet-scc-leaf-baseline.md
 - tests/unit/architecture/layer-imports.test.ts
-
-## Blocker
-
-**2026-10-26T06:38:01.155Z — worker 未落地（exited-not-landed）**
-
-- 未落地原因：step=suite: suite red
-- run_id：wk-prod-anchor
-- session_id：a9212d7c-b14f-4f9d-b9d0-f36b78bb1fd9
