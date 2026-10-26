@@ -18,11 +18,11 @@ archguard 已有 `tests/unit/architecture/layer-imports.test.ts` 的硬方向守
 
 ## AC
 
-- [ ] `tests/unit/architecture/layer-imports.test.ts` 新增：目录级依赖图（TS 语法树解析、注释不算边）+ Tarjan SCC，SCC 钉成基线常量（固定槽位、只降不升）；断言当前树 SCC 与基线逐成员相等；`npx vitest run tests/unit/architecture/layer-imports.test.ts` exit 0
-- [ ] 新增 directoryManifest 常量 + `nodeCount === manifest.length` 断言；manifest 之外的目录必须是叶子：出边只能指向自身或已登记共享层，且不能被其它模块目录 import；合成 fixture 断言「新目录 import 同级目录」判红
-- [ ] 双登记：新增合法目录须同时改 manifest 常量与 nodeCount（+1）并写 RECORDED CHANGE；fixture 断言「只改一处」判红
-- [ ] false-form 用例：注入一条反向边 / 一个环 → 判红并点名成员；未改动树保持绿
-- [ ] `npm run type-check` 通过
+- [x] `tests/unit/architecture/layer-imports.test.ts` 新增：目录级依赖图（TS 语法树解析、注释不算边）+ Tarjan SCC，SCC 钉成基线常量（固定槽位、只降不升）；断言当前树 SCC 与基线逐成员相等；`npx vitest run tests/unit/architecture/layer-imports.test.ts` exit 0
+- [x] 新增 directoryManifest 常量 + `nodeCount === manifest.length` 断言；manifest 之外的目录必须是叶子：出边只能指向自身或已登记共享层，且不能被其它模块目录 import；合成 fixture 断言「新目录 import 同级目录」判红
+- [x] 双登记：新增合法目录须同时改 manifest 常量与 nodeCount（+1）并写 RECORDED CHANGE；fixture 断言「只改一处」判红
+- [x] false-form 用例：注入一条反向边 / 一个环 → 判红并点名成员；未改动树保持绿
+- [x] `npm run type-check` 通过
 
 ## DoD
 
