@@ -24,10 +24,10 @@ extra:
 
 ## AC
 
-- [ ] `archguard_detect_duplicates` 新增 `trackedOnly` 布尔参数（默认 false，向后兼容）；`npx vitest run tests/unit/cli/mcp/tools/duplicate-tools.test.ts` exit 0，断言参数透传
-- [ ] `trackedOnly:true` 时 `collectSourceFiles` 以 `git ls-files --cached --others --exclude-standard` 命中的 .ts 集合为扫描集；夹具含一个未跟踪 .ts 文件，断言其被排除、其函数不进重复组；`npx vitest run tests/unit/analysis/duplicates/duplicates.test.ts` exit 0
-- [ ] `trackedOnly:false`（默认）行为不变，现有用例不回归
-- [ ] `npm run type-check` 通过
+- [x] `archguard_detect_duplicates` 新增 `trackedOnly` 布尔参数（默认 false，向后兼容）；`npx vitest run tests/unit/cli/mcp/tools/duplicate-tools.test.ts` exit 0，断言参数透传
+- [x] `trackedOnly:true` 时 `collectSourceFiles` 以 `git ls-files --cached --others --exclude-standard` 命中的 .ts 集合为扫描集；夹具含一个未跟踪 .ts 文件，断言其被排除、其函数不进重复组；`npx vitest run tests/unit/analysis/duplicates/duplicates.test.ts` exit 0
+- [x] `trackedOnly:false`（默认）行为不变，现有用例不回归
+- [x] `npm run type-check` 通过
 
 ## DoD
 
