@@ -73,6 +73,69 @@ describe('QueryManifest types', () => {
   });
 });
 
+describe('QueryManifest auxArtifacts', () => {
+  it('records duplicates / shape-smells / git-history staleness fields', () => {
+    const manifest: QueryManifest = {
+      version: '1.0',
+      generatedAt: '2026-10-26T00:00:00.000Z',
+      scopes: [],
+      auxArtifacts: {
+        duplicates: [
+          {
+            scopeKey: 'abcd1234',
+            label: 'src (typescript)',
+            generatedAt: '2026-10-25T00:00:00.000Z',
+            sourcesHash: 'abcd1234',
+          },
+        ],
+        'shape-smells': [
+          {
+            scopeKey: 'abcd1234',
+            label: 'src (typescript)',
+            generatedAt: '2026-10-24T00:00:00.000Z',
+            sourcesHash: 'abcd1234',
+          },
+        ],
+        'git-history': [
+          {
+            scopeKey: 'abcd1234',
+            label: 'src (typescript)',
+            generatedAt: '2026-10-23T00:00:00.000Z',
+            sourcesHash: 'abcd1234',
+          },
+        ],
+      },
+    };
+
+    expect(Object.keys(manifest.auxArtifacts ?? {})).toEqual([
+      'duplicates',
+      'shape-smells',
+      'git-history',
+    ]);
+    const duplicates = manifest.auxArtifacts?.duplicates;
+    expect(duplicates).toHaveLength(1);
+    expect(duplicates?.[0]).toMatchObject({
+      scopeKey: 'abcd1234',
+      label: 'src (typescript)',
+      generatedAt: '2026-10-25T00:00:00.000Z',
+      sourcesHash: 'abcd1234',
+    });
+    // A stale artifact is detectable mechanically: its sources no longer hash
+    // to the scope key it claims to describe.
+    expect(manifest.auxArtifacts?.['git-history']?.[0].sourcesHash).not.toBe('deadbeef');
+  });
+
+  it('keeps auxArtifacts optional for manifests written before this field existed', () => {
+    const legacy: QueryManifest = {
+      version: '1.0',
+      generatedAt: '2026-10-01T00:00:00.000Z',
+      scopes: [],
+    };
+
+    expect(legacy.auxArtifacts).toBeUndefined();
+  });
+});
+
 const makeArch = (): ArchJSON => ({
   version: '1.1',
   language: 'typescript',

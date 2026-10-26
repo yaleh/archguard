@@ -52,3 +52,22 @@ extra:
 - 未落地原因：step=suite: suite red
 - run_id：wk-prod-anchor
 - session_id：4000ec73-f60d-45db-a09b-d746706831de
+
+## Needs-Human
+
+**执行 2026-10-26T05:49:51.501Z — 停派终止（失败无法归因，⛔ 不再重派）**
+
+- 阻碍原因：exited-not-landed 失败无法归因（基建/契约疑似，非实现缺陷）——停止重派，⛔ 不再拿新会话撞同一堵墙：suite red could not be attributed to any failing test file in 2 consecutive rounds (bounded to at most one retry) — infra/contract suspected, not an implementable defect (parser extracted 0 of 0 failing lines and attributed none to a file); stopping instead of spending another worker session
+- 失败步/判词：step=suite: suite red
+- run_id：wk-prod-anchor
+- session_id：8ef60e8d-466f-47c3-992e-17d24afb17db
+- suite 日志：/data/home/yale/work/archguard/.quay/fan-in-suite-gap-duplicates-per-scope-persistence~wk-prod-anchor~1792993353073-4f674f.log
+- fan-in 日志：/data/home/yale/work/archguard/.quay/fan-in-gap-duplicates-per-scope-persistence-wk-prod-anchor.log
+
+## Triage
+
+**2026-10-26T05:58:52Z — 人 triage：suite red 是 worktree 环境问题，非实现缺陷；已修复并复跑全量绿，翻回 ready**
+
+- 根因：worktree `node_modules` 是指向主检出的符号链接，`tests/integration/parser-pool.test.ts`（ProcessParseWorkerPools 的 worker 线程）在 worktree 里挂起/失败（5 failed：2 超时 + 3 `expected false to be true`），与本任务的 duplicates 持久化代码无关。
+- 证据：主检出真实 node_modules 下 parser-pool 6/6 过；worktree 符号链接下 5/6 红；把 worktree 的 node_modules 换成真实目录后，worktree parser-pool 6/6、全量 `bash scripts/test.sh` 387 passed | 3 skipped / 5899 passed | 18 skipped 全绿。
+- 处置：已在保留的 worktree 里把 node_modules 换成真实目录（未重跑 dispatch-worktree-setup.sh，避免换回符号链接）。

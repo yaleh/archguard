@@ -104,6 +104,68 @@ async function readIndexEntries(root: string): Promise<DuplicateIndexEntry[]> {
   return entries.sort((a, b) => a.scopeKey.localeCompare(b.scopeKey));
 }
 
+/** A persisted duplicates manifest plus the directory key it was read from. */
+export interface DuplicatesArtifactRecord {
+  /** `query/duplicates/<scopeKey>/` directory name; absent for the legacy flat layout. */
+  scopeKey?: string;
+  /** The artifact's own manifest, with the optional identity fields newer writers add. */
+  manifest: DuplicateManifest & {
+    /** Scope key recorded inside the manifest (per-scope writers). */
+    scopeKey?: string;
+    /** Human-readable scope label recorded inside the manifest (per-scope writers). */
+    label?: string;
+    /** Language of the analysed sources, when recorded. */
+    language?: string;
+  };
+}
+
+/**
+ * Read every persisted duplicates artifact manifest.
+ *
+ * Supports both on-disk layouts:
+ * - per-scope `query/duplicates/<scopeKey>/manifest.json` (one record per scope),
+ * - the legacy flat `query/duplicates/manifest.json` (one record, no directory key).
+ *
+ * Missing directories, missing manifests and malformed JSON are skipped: a
+ * broken auxiliary artifact must never make `analyze` fail. Never throws.
+ */
+export async function readDuplicatesArtifacts(
+  archDir: string
+): Promise<DuplicatesArtifactRecord[]> {
+  const root = duplicatesDir(archDir);
+  if (!(await fs.pathExists(root))) return [];
+
+  const records: DuplicatesArtifactRecord[] = [];
+  const readOne = async (manifestPath: string, scopeKey?: string): Promise<void> => {
+    try {
+      const manifest = (await fs.readJson(manifestPath)) as DuplicatesArtifactRecord['manifest'];
+      records.push(scopeKey === undefined ? { manifest } : { scopeKey, manifest });
+    } catch (err: unknown) {
+      console.warn(
+        `[duplicates] Ignoring unreadable artifact manifest ${manifestPath}: ${errorMessage(err)}`
+      );
+    }
+  };
+
+  // Legacy flat layout.
+  const flatPath = path.join(root, MANIFEST_FILE);
+  if (await fs.pathExists(flatPath)) {
+    await readOne(flatPath);
+  }
+
+  // Per-scope layout: one directory per scope key.
+  const dirents = await fs.readdir(root, { withFileTypes: true }).catch(() => []);
+  for (const dirent of dirents) {
+    if (!dirent.isDirectory()) continue;
+    const manifestPath = path.join(root, dirent.name, MANIFEST_FILE);
+    if (await fs.pathExists(manifestPath)) {
+      await readOne(manifestPath, dirent.name);
+    }
+  }
+
+  return records;
+}
+
 /**
  * Load one scope's persisted duplicate results.
  *
