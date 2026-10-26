@@ -2,7 +2,7 @@
 id: gap-aux-artifacts-staleness-signal
 title: 主 query manifest 增加 auxArtifacts 块：duplicates/shape-smells/git-history 的
   generatedAt+sourcesHash 过期信号
-status: ready
+status: done
 labels:
   - gap
   - cli
