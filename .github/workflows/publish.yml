@@ -1,0 +1,51 @@
+name: Publish
+
+# Publish core + plugin to npmjs via OIDC Trusted Publishing — no stored token;
+# a short-lived per-run credential is exchanged from this workflow's OIDC identity.
+#
+# Deliberately a SEPARATE workflow from release.yml (verify → advance-master,
+# GOAL-001 / AC-001): publishing is a downstream release action, not a validation
+# gate, so it must not become a job that advance-master's `needs` has to cover.
+# Its own gate is the core package's prepublishOnly (check-version-has-tag.sh →
+# clean → build → test), identical to the previous local `npm publish` flow.
+#
+# npmjs Trusted Publisher config (one per package) must name THIS workflow file
+# (`publish.yml`), repo `yaleh/archguard`, and select "Allow `npm publish`".
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish core + plugin to npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Full history + tags: prepublishOnly runs check-version-has-tag.sh,
+          # which needs `refs/tags/v<version>` present in the local clone.
+          fetch-depth: 0
+
+      - name: Setup Node.js (npm >= 11.5.1 for OIDC)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          # Deliberately NO `registry-url`: setup-node would set NODE_AUTH_TOKEN,
+          # which forces token auth and breaks OIDC. Default registry is used.
+
+      - name: Install core dependencies
+        run: npm ci
+
+      - name: Publish core (@yalehwang/archguard)
+        # prepublishOnly runs check-version-has-tag.sh && clean && build && test.
+        # The installer's "real claude CLI" case self-skips on CI (no `claude` binary).
+        run: npm publish --provenance --access public
+
+      - name: Publish plugin (@yalehwang/archguard-claude-plugin)
+        run: cd plugin && npm publish --provenance --access public
