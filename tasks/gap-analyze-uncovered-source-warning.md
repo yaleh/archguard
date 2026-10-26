@@ -1,7 +1,7 @@
 ---
 id: gap-analyze-uncovered-source-warning
 title: analyze 对根目录未被任何 scope 覆盖的 .ts 源码给出告警
-status: todo
+status: ready
 labels:
   - gap
   - cli
