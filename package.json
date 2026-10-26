@@ -34,6 +34,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run tests/unit",
+    "census": "vitest run tests/unit/architecture/hygiene-ratchet-census.test.ts",
+    "census:baseline": "HYGIENE_CENSUS_WRITE_BASELINE=1 vitest run tests/unit/architecture/hygiene-ratchet-census.test.ts",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "vitest run tests/e2e",
     "test:perf": "vitest run --config vitest.perf.config.ts",
