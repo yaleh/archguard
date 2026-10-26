@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
+import { execFileSync } from 'child_process';
 import { detectDuplicates, groupDuplicates, isTestFile } from '@/analysis/duplicates/group.js';
 import { persistDuplicates, loadDuplicates } from '@/analysis/duplicates/persistence.js';
 import type { FunctionFingerprint } from '@/parser/function-fingerprint.js';
@@ -89,6 +90,45 @@ describe('duplicate detection', () => {
 
   it('throws a clear error when a source path does not exist', async () => {
     await expect(detectDuplicates(root, ['nope'])).rejects.toThrow(/does not exist/);
+  });
+
+  it('trackedOnly drops __ residual files while the default scan keeps them', async () => {
+    execFileSync('git', ['init', '-q', root]);
+    execFileSync('git', ['-C', root, 'add', 'src/a.ts', 'src/b.ts', 'src/unique.ts']);
+    // Untracked, not ignored leftover scaffolding that duplicates collectA's body verbatim.
+    await fs.outputFile(
+      path.join(root, 'src/__criterion-falsify-attempt-id-1276453.ts'),
+      fn('collectResidual', 'a')
+    );
+
+    const dflt = await detectDuplicates(root, ['src']);
+    expect(dflt.manifest.options.trackedOnly).toBe(false);
+    expect(dflt.manifest.scannedFiles).toBe(4);
+    expect(dflt.groups[0].members).toHaveLength(3);
+    expect(dflt.groups[0].members.map((m) => m.file)).toContain(
+      'src/__criterion-falsify-attempt-id-1276453.ts'
+    );
+
+    const tracked = await detectDuplicates(root, ['src'], { trackedOnly: true });
+    expect(tracked.manifest.options.trackedOnly).toBe(true);
+    expect(tracked.manifest.scannedFiles).toBe(3);
+    expect(tracked.groups[0].members.map((m) => m.file)).toEqual(['src/a.ts', 'src/b.ts']);
+  });
+
+  it('trackedOnly excludes files that git ignores', async () => {
+    execFileSync('git', ['init', '-q', root]);
+    await fs.outputFile(path.join(root, '.gitignore'), 'src/generated/\n');
+    execFileSync('git', ['-C', root, 'add', 'src/a.ts', 'src/b.ts', 'src/unique.ts', '.gitignore']);
+    await fs.outputFile(path.join(root, 'src/generated/gen.ts'), fn('collectGen', 'a'));
+
+    const dflt = await detectDuplicates(root, ['src']);
+    expect(dflt.manifest.scannedFiles).toBe(4);
+
+    const tracked = await detectDuplicates(root, ['src'], { trackedOnly: true });
+    expect(tracked.manifest.scannedFiles).toBe(3);
+    expect(tracked.groups.flatMap((g) => g.members.map((m) => m.file))).not.toContain(
+      'src/generated/gen.ts'
+    );
   });
 
   it('drops groups fully nested inside a larger duplicate group', () => {

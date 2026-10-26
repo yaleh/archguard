@@ -85,6 +85,21 @@ describe('archguard_detect_duplicates', () => {
     expect(strict.groups).toHaveLength(0);
   });
 
+  it('passes trackedOnly through to the scan options', async () => {
+    const { handler } = captureHandler(root);
+
+    const withFlag = JSON.parse(
+      (await handler({ minStatements: 6, minTokens: 50, topN: 20, trackedOnly: true })).content[0]
+        .text
+    ) as DuplicateAnalysis;
+    expect(withFlag.manifest.options.trackedOnly).toBe(true);
+
+    const byDefault = JSON.parse(
+      (await handler({ minStatements: 6, minTokens: 50, topN: 20 })).content[0].text
+    ) as DuplicateAnalysis;
+    expect(byDefault.manifest.options.trackedOnly).toBe(false);
+  });
+
   it('persists the result under a per-scope directory and never in the legacy flat files', async () => {
     await captureHandler(root).handler({ minStatements: 6, minTokens: 50, topN: 20 });
 

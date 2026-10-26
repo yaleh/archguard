@@ -23,10 +23,10 @@ extra:
 
 ## AC
 
-- [ ] `query/manifest.json` 含 `auxArtifacts` 块，形如 `{ "duplicates": [{ "scopeKey","label","generatedAt","sourcesHash" }], "shape-smells": {...}, "git-history": {...} }`；`npx vitest run tests/unit/cli/query/query-manifest.test.ts tests/unit/cli/query/query-artifacts.test.ts` exit 0，新增用例断言字段存在与结构
-- [ ] 当 `query/duplicates/<scopeKey>/manifest.json`、`query/shape-smells/`、`query/git-history/` 的产物 manifest 存在时，其 generatedAt 被读入对应 auxArtifacts 项；不存在时不写该项（不报错、不阻塞 analyze）
-- [ ] `sourcesHash` 用与 scope key 相同的 `hashSources` 公式计算，与对应 scope 的 key 一致；单测断言消费方可用「key ≠ sourcesHash」判定过期
-- [ ] `bash scripts/test.sh --for-task gap-aux-artifacts-staleness-signal` 通过（scoped gate）；`npm run type-check` 通过
+- [x] `query/manifest.json` 含 `auxArtifacts` 块，形如 `{ "duplicates": [{ "scopeKey","label","generatedAt","sourcesHash" }], "shape-smells": {...}, "git-history": {...} }`；`npx vitest run tests/unit/cli/query/query-manifest.test.ts tests/unit/cli/query/query-artifacts.test.ts` exit 0，新增用例断言字段存在与结构
+- [x] 当 `query/duplicates/<scopeKey>/manifest.json`、`query/shape-smells/`、`query/git-history/` 的产物 manifest 存在时，其 generatedAt 被读入对应 auxArtifacts 项；不存在时不写该项（不报错、不阻塞 analyze）
+- [x] `sourcesHash` 用与 scope key 相同的 `hashSources` 公式计算，与对应 scope 的 key 一致；单测断言消费方可用「key ≠ sourcesHash」判定过期
+- [x] `bash scripts/test.sh --for-task gap-aux-artifacts-staleness-signal` 通过（scoped gate）；`npm run type-check` 通过
 
 ## DoD
 
@@ -42,3 +42,11 @@ extra:
 - src/cli/git-history/history-writer.ts
 - tests/unit/cli/query/query-manifest.test.ts
 - tests/unit/cli/query/query-artifacts.test.ts
+
+## Blocker
+
+**2026-10-26T05:39:52.879Z — worker 未落地（exited-not-landed）**
+
+- 未落地原因：step=suite: suite red
+- run_id：wk-prod-anchor
+- session_id：a9fb1ed9-66e3-49b5-9a0f-c8823db10fca

@@ -7,6 +7,7 @@
 
 import fs from 'fs-extra';
 import path from 'path';
+import { execFileSync } from 'child_process';
 import { globbySync } from 'globby';
 import { fingerprintSourceText, type FunctionFingerprint } from '@/parser/function-fingerprint.js';
 import {
@@ -41,6 +42,7 @@ export function resolveDuplicateOptions(options: Partial<DuplicateOptions> = {})
     minStatements: options.minStatements ?? DEFAULT_DUPLICATE_OPTIONS.minStatements,
     minTokens: options.minTokens ?? DEFAULT_DUPLICATE_OPTIONS.minTokens,
     includeTests: options.includeTests ?? DEFAULT_DUPLICATE_OPTIONS.includeTests,
+    trackedOnly: options.trackedOnly ?? DEFAULT_DUPLICATE_OPTIONS.trackedOnly,
     topN: options.topN,
   };
 }
@@ -115,13 +117,46 @@ function dropSubsumed(sorted: DuplicateGroup[]): DuplicateGroup[] {
 }
 
 /**
+ * Files git knows about under `root`: tracked files plus untracked files that are not ignored
+ * (`--exclude-standard`). Returns `null` when git cannot answer (not a work tree, git missing) so
+ * the caller can fall back to the plain directory scan.
+ */
+function listGitKnownFiles(root: string): Set<string> | null {
+  try {
+    const out = execFileSync(
+      'git',
+      ['-C', root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+      { encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] }
+    );
+    return new Set(
+      out
+        .split('\0')
+        .filter(Boolean)
+        .map((rel) => path.resolve(root, rel))
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** Leftover scaffolding files carry a `__` basename prefix (e.g. `__criterion-*.ts`). */
+function isResidualFile(file: string): boolean {
+  return path.basename(file).startsWith('__');
+}
+
+/**
  * Expand `sources` (files or directories, absolute or relative to `root`) into TypeScript files.
  * Throws when a source does not exist.
+ *
+ * With `trackedOnly`, the result is intersected with the `git ls-files --cached --others
+ * --exclude-standard` set (tracked plus not-ignored untracked files) and `__*` residual files are
+ * dropped. Git being unavailable degrades to the plain directory scan rather than failing.
  */
 export function collectSourceFiles(
   root: string,
   sources: string[],
-  includeTests: boolean
+  includeTests: boolean,
+  trackedOnly = false
 ): string[] {
   const files = new Set<string>();
   const extGlob = `**/*.{${SOURCE_EXTENSIONS.join(',')}}`;
@@ -148,9 +183,14 @@ export function collectSourceFiles(
     }
   }
 
-  return [...files]
+  const collected = [...files]
     .filter((f) => !f.endsWith('.d.ts') && (includeTests || !isTestFile(path.relative(root, f))))
     .sort();
+
+  if (!trackedOnly) return collected;
+
+  const known = listGitKnownFiles(root);
+  return collected.filter((f) => !isResidualFile(f) && (known === null || known.has(f)));
 }
 
 /**
@@ -168,7 +208,7 @@ export async function detectDuplicates(
   scope?: DuplicateScopeRef
 ): Promise<DuplicateAnalysis> {
   const opts = resolveDuplicateOptions(options);
-  const files = collectSourceFiles(root, sources, opts.includeTests);
+  const files = collectSourceFiles(root, sources, opts.includeTests, opts.trackedOnly);
   const fingerprints: FunctionFingerprint[] = [];
 
   for (const file of files) {

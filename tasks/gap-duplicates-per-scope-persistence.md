@@ -44,3 +44,11 @@ extra:
 - src/cli/mcp/tools/duplicate-tools.ts
 - tests/unit/analysis/duplicates/duplicates.test.ts
 - tests/unit/cli/mcp/tools/duplicate-tools.test.ts
+
+## Blocker
+
+**2026-10-26T05:20:24.372Z — worker 未落地（exited-not-landed）**
+
+- 未落地原因：step=suite: suite red
+- run_id：wk-prod-anchor
+- session_id：4000ec73-f60d-45db-a09b-d746706831de
