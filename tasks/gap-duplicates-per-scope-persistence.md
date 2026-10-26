@@ -1,7 +1,7 @@
 ---
 id: gap-duplicates-per-scope-persistence
 title: detect_duplicates 按 scope 分目录持久化：manifest 记 scopeKey/label，避免不同 scope 互相覆盖
-status: ready
+status: done
 labels:
   - gap
   - defect
