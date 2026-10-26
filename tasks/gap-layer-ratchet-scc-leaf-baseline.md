@@ -1,7 +1,7 @@
 ---
 id: gap-layer-ratchet-scc-leaf-baseline
 title: 层守卫升级为 ratchet：目录级 SCC 基线 + 新目录必须是叶子 + manifest/PIN 双登记
-status: ready
+status: done
 labels:
   - gap
   - architecture
