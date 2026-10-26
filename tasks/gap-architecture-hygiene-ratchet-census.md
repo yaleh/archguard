@@ -40,3 +40,11 @@ archguard 没有 standing 的代码卫生普查基线。加一个确定性 censu
 - tests/unit/architecture/hygiene-ratchet-census.test.ts (new)
 - tests/fixtures/architecture/hygiene-ratchet-census.baseline.json (new)
 - package.json
+
+## Blocker
+
+**2026-10-26T06:43:42.943Z — worker 未落地（exited-not-landed）**
+
+- 未落地原因：step=suite: suite red
+- run_id：wk-prod-anchor
+- session_id：61241b7a-0c08-4618-8db1-1ecb76f13a8d
