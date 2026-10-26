@@ -25,11 +25,11 @@ extra:
 
 ## AC
 
-- [ ] `persistDuplicates` 写入 `query/duplicates/<scopeKey>/manifest.json` 与 `groups.json`，manifest 含 `scopeKey` 与 `label` 字段；`npx vitest run tests/unit/analysis/duplicates/duplicates.test.ts` exit 0，新增用例断言两个不同 scope 各自成目录、互不覆盖
-- [ ] 顶目录 `query/duplicates/index.json` 存在，`entries` 列出每个已写 scopeKey 的 label/sources/generatedAt，与磁盘目录一一对应；单测机械断言该一致性
-- [ ] 旧的扁平 `query/duplicates/manifest.json` / `groups.json` 不再被写；`loadDuplicates` 按 scopeKey 读取，无 scopeKey 参数时的行为在测试中写清
-- [ ] `archguard_detect_duplicates` 工具描述补充盲区说明「仅精确结构克隆（Type-1/2），单语句/极小函数不覆盖」；`npx vitest run tests/unit/cli/mcp/tools/duplicate-tools.test.ts` exit 0（现有用例不回归）
-- [ ] `npm run type-check` 通过
+- [x] `persistDuplicates` 写入 `query/duplicates/<scopeKey>/manifest.json` 与 `groups.json`，manifest 含 `scopeKey` 与 `label` 字段；`npx vitest run tests/unit/analysis/duplicates/duplicates.test.ts` exit 0，新增用例断言两个不同 scope 各自成目录、互不覆盖
+- [x] 顶目录 `query/duplicates/index.json` 存在，`entries` 列出每个已写 scopeKey 的 label/sources/generatedAt，与磁盘目录一一对应；单测机械断言该一致性
+- [x] 旧的扁平 `query/duplicates/manifest.json` / `groups.json` 不再被写；`loadDuplicates` 按 scopeKey 读取，无 scopeKey 参数时的行为在测试中写清
+- [x] `archguard_detect_duplicates` 工具描述补充盲区说明「仅精确结构克隆（Type-1/2），单语句/极小函数不覆盖」；`npx vitest run tests/unit/cli/mcp/tools/duplicate-tools.test.ts` exit 0（现有用例不回归）
+- [x] `npm run type-check` 通过
 
 ## DoD
 
@@ -40,6 +40,7 @@ extra:
 - tasks/gap-duplicates-per-scope-persistence.md
 - src/analysis/duplicates/persistence.ts
 - src/analysis/duplicates/types.ts
+- src/analysis/duplicates/group.ts
 - src/cli/mcp/tools/duplicate-tools.ts
 - tests/unit/analysis/duplicates/duplicates.test.ts
 - tests/unit/cli/mcp/tools/duplicate-tools.test.ts
