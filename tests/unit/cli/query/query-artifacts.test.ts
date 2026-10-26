@@ -736,3 +736,200 @@ describe('persistQueryScopes identity normalization', () => {
     }
   });
 });
+
+describe('persistQueryScopes auxArtifacts staleness signal', () => {
+  const readManifest = async (workDir: string): Promise<QueryManifest> =>
+    (await fs.readJson(path.join(workDir, 'query', 'manifest.json'))) as QueryManifest;
+
+  /** Seed a real source dir and run one analyze pass for it. */
+  const seedScope = async (root: string) => {
+    const src = path.join(root, 'project', 'src');
+    fs.ensureDirSync(src);
+    const sourceDir = fs.realpathSync(src);
+    const key = hashSources([sourceDir], 'typescript');
+    const run = () =>
+      persistQueryScopes(path.join(root, 'project', '.archguard'), [
+        { key, sources: [sourceDir], archJson: makeArchJson(), kind: 'parsed' },
+      ]);
+    return { workDir: path.join(root, 'project', '.archguard'), key, sourceDir, run };
+  };
+
+  const writeDuplicateManifest = async (
+    workDir: string,
+    scopeKey: string,
+    sourceDir: string,
+    generatedAt: string,
+    label?: string
+  ) => {
+    await fs.outputJson(path.join(workDir, 'query', 'duplicates', scopeKey, 'manifest.json'), {
+      version: '1',
+      generatedAt,
+      sources: [sourceDir],
+      scannedFiles: 1,
+      scannedFunctions: 0,
+      totalGroups: 0,
+      options: { minStatements: 6, minTokens: 50, includeTests: false },
+      ...(label ? { label } : {}),
+    });
+  };
+
+  it('records generatedAt/sourcesHash for every auxiliary artifact kind on disk', async () => {
+    const root = makeTmpDir();
+    tmpDirs.push(root);
+    const { workDir, key, sourceDir, run } = await seedScope(root);
+    await run();
+
+    // No auxiliary artifact yet: the block is absent.
+    expect((await readManifest(workDir)).auxArtifacts).toBeUndefined();
+
+    // Per-scope duplicates layout (query/duplicates/<scopeKey>/manifest.json).
+    await writeDuplicateManifest(
+      workDir,
+      key,
+      sourceDir,
+      '2026-10-01T00:00:00.000Z',
+      'src (typescript)'
+    );
+    // Flat project-wide artifacts.
+    await fs.outputJson(path.join(workDir, 'query', 'shape-smells', 'manifest.json'), {
+      version: '1',
+      generatedAt: '2026-10-02T00:00:00.000Z',
+      totalSmells: 0,
+      bySeverity: { info: 0, warning: 0 },
+    });
+    await fs.outputJson(path.join(workDir, 'query', 'git-history', 'manifest.json'), {
+      version: '1',
+      generatedAt: '2026-10-03T00:00:00.000Z',
+      headRef: 'abc1234',
+      analyzedBranch: 'main',
+      sinceDays: 90,
+      maxCommits: 500,
+      totalCommits: 0,
+      includeMerges: false,
+      granularities: ['file'],
+    });
+
+    // Second analyze pass: the main manifest must now report the artifacts.
+    await run();
+    const manifest = await readManifest(workDir);
+
+    const duplicates = manifest.auxArtifacts?.duplicates;
+    expect(duplicates).toEqual([
+      {
+        scopeKey: key,
+        label: 'src (typescript)',
+        generatedAt: '2026-10-01T00:00:00.000Z',
+        sourcesHash: key,
+      },
+    ]);
+
+    for (const [kind, generatedAt] of [
+      ['shape-smells', '2026-10-02T00:00:00.000Z'],
+      ['git-history', '2026-10-03T00:00:00.000Z'],
+    ] as const) {
+      const entries = manifest.auxArtifacts?.[kind];
+      expect(entries).toEqual([
+        {
+          scopeKey: key,
+          label: 'src (typescript)',
+          generatedAt,
+          sourcesHash: key,
+        },
+      ]);
+    }
+
+    // The DoD signal itself: the main manifest is newer than the artifacts it lists.
+    expect(Date.parse(manifest.generatedAt)).toBeGreaterThan(
+      Date.parse('2026-10-03T00:00:00.000Z')
+    );
+  });
+
+  it('reads the legacy flat duplicates layout and matches it to its scope', async () => {
+    const root = makeTmpDir();
+    tmpDirs.push(root);
+    const { workDir, key, sourceDir, run } = await seedScope(root);
+    await run();
+
+    await fs.outputJson(path.join(workDir, 'query', 'duplicates', 'manifest.json'), {
+      version: '1',
+      generatedAt: '2026-10-04T00:00:00.000Z',
+      sources: [sourceDir],
+      scannedFiles: 1,
+      scannedFunctions: 0,
+      totalGroups: 0,
+      options: { minStatements: 6, minTokens: 50, includeTests: false },
+    });
+
+    await run();
+    const entry = (await readManifest(workDir)).auxArtifacts?.duplicates?.[0];
+    expect(entry).toEqual({
+      scopeKey: key,
+      label: 'src (typescript)',
+      generatedAt: '2026-10-04T00:00:00.000Z',
+      sourcesHash: key,
+    });
+  });
+
+  it('only records kinds whose manifest exists', async () => {
+    const root = makeTmpDir();
+    tmpDirs.push(root);
+    const { workDir, run } = await seedScope(root);
+    await run();
+
+    await fs.outputJson(path.join(workDir, 'query', 'git-history', 'manifest.json'), {
+      version: '1',
+      generatedAt: '2026-10-05T00:00:00.000Z',
+      headRef: 'abc1234',
+      analyzedBranch: 'main',
+      sinceDays: 90,
+      maxCommits: 500,
+      totalCommits: 0,
+      includeMerges: false,
+      granularities: ['file'],
+    });
+
+    await run();
+    const manifest = await readManifest(workDir);
+    expect(Object.keys(manifest.auxArtifacts ?? {})).toEqual(['git-history']);
+  });
+
+  it('exposes sourcesHash so a consumer can detect an artifact that no longer matches its scope', async () => {
+    const root = makeTmpDir();
+    tmpDirs.push(root);
+    const { workDir, key, run } = await seedScope(root);
+    await run();
+
+    const otherSrc = path.join(root, 'other', 'lib');
+    fs.ensureDirSync(otherSrc);
+    await fs.outputJson(path.join(workDir, 'query', 'duplicates', 'manifest.json'), {
+      version: '1',
+      generatedAt: '2026-10-06T00:00:00.000Z',
+      sources: [fs.realpathSync(otherSrc)],
+      scannedFiles: 1,
+      scannedFunctions: 0,
+      totalGroups: 0,
+      options: { minStatements: 6, minTokens: 50, includeTests: false },
+    });
+
+    await run();
+    const entry = (await readManifest(workDir)).auxArtifacts?.duplicates?.[0];
+    expect(entry).toBeDefined();
+    // The artifact's sources no longer hash to the live scope key.
+    expect(entry?.sourcesHash).not.toBe(key);
+    expect(entry?.scopeKey).toBe(entry?.sourcesHash);
+  });
+
+  it('ignores malformed auxiliary manifests without failing the analyze pass', async () => {
+    const root = makeTmpDir();
+    tmpDirs.push(root);
+    const { workDir, key, run } = await seedScope(root);
+    await run();
+
+    await fs.outputFile(path.join(workDir, 'query', 'duplicates', 'manifest.json'), '{not json');
+
+    await expect(run()).resolves.toHaveLength(1);
+    const manifest = await readManifest(workDir);
+    expect(manifest.scopes.map((scope) => scope.key)).toEqual([key]);
+    expect(manifest.auxArtifacts?.duplicates).toBeUndefined();
+  });
+});

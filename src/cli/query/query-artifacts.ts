@@ -1,10 +1,20 @@
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
-import type { QueryManifest, QueryScopeEntry, QuerySourceGroup } from './query-manifest.js';
+import type {
+  AuxArtifactEntry,
+  AuxArtifactKind,
+  AuxArtifactsBlock,
+  QueryManifest,
+  QueryScopeEntry,
+  QuerySourceGroup,
+} from './query-manifest.js';
 import { buildArchIndex } from './arch-index-builder.js';
 import { canonicalizeArchJson } from '../utils/canonicalize-arch-json.js';
 import { hashSources, realpathOrSelf } from '../processors/arch-json-utils.js';
+import { readDuplicatesArtifacts } from '@/analysis/duplicates/persistence.js';
+import { readShapeSmellManifest } from '@/analysis/shape-smells/persistence.js';
+import { readHistoryManifest } from '../git-history/history-writer.js';
 import { ExtensionAccessor } from '@/core/query/extension-accessor.js';
 
 /**
@@ -185,6 +195,137 @@ interface MergedIdentity {
 }
 
 // ---------------------------------------------------------------------------
+// Auxiliary artifact staleness signal
+// ---------------------------------------------------------------------------
+
+/** Identity fields an auxiliary artifact may declare about itself. */
+interface DeclaredAuxIdentity {
+  scopeKey?: string;
+  label?: string;
+  sources?: string[];
+  language?: string;
+}
+
+/** Normalized source-set key used to pair an artifact with a query scope. */
+function sourceSetKey(sources: string[]): string {
+  return sources
+    .map((source) => realpathOrSelf(source).replace(/\\/g, '/'))
+    .sort()
+    .join('|');
+}
+
+function findScopeBySources(
+  scopes: QueryScopeEntry[],
+  sources: string[]
+): QueryScopeEntry | undefined {
+  if (sources.length === 0) return undefined;
+  const wanted = sourceSetKey(sources);
+  return scopes.find((scope) => sourceSetKey(scope.sources) === wanted);
+}
+
+/**
+ * Resolve which query scope an auxiliary artifact belongs to.
+ *
+ * Order of evidence:
+ * 1. a `scopeKey` declared by the artifact (per-scope directories/manifests),
+ * 2. the artifact's recorded `sources` matched against a scope's sources,
+ * 3. the manifest's global scope for flat, project-wide artifacts.
+ *
+ * `sourcesHash` is always computed with the same `hashSources()` formula as
+ * scope keys, so it equals `scopeKey` while the artifact still matches its
+ * scope; `scopeKey !== sourcesHash` means the artifact's recorded sources no
+ * longer identify that scope (stale/orphaned).
+ */
+function resolveAuxIdentity(
+  scopes: QueryScopeEntry[],
+  globalScopeKey: string | undefined,
+  declared: DeclaredAuxIdentity
+): Omit<AuxArtifactEntry, 'generatedAt'> | null {
+  const sources = (Array.isArray(declared.sources) ? declared.sources : []).filter(
+    (source) => typeof source === 'string' && source.length > 0
+  );
+  const declaredKey = typeof declared.scopeKey === 'string' ? declared.scopeKey : undefined;
+  const declaredScope = declaredKey ? scopes.find((scope) => scope.key === declaredKey) : undefined;
+  const matchedScope = declaredScope ?? findScopeBySources(scopes, sources);
+
+  if (sources.length > 0) {
+    const language = matchedScope?.language ?? declared.language ?? 'typescript';
+    return {
+      scopeKey: declaredKey ?? matchedScope?.key ?? hashSources(sources, language),
+      label: declared.label ?? matchedScope?.label ?? generateScopeLabel(sources, language),
+      sourcesHash: hashSources(sources, language),
+    };
+  }
+
+  // No recorded sources: a flat artifact covers the whole project, so attribute
+  // it to the manifest's global scope. Its key is already hashSources(sources).
+  const scope =
+    declaredScope ??
+    scopes.find((entry) => entry.key === globalScopeKey) ??
+    (scopes.length === 1 ? scopes[0] : undefined);
+  if (!scope) return null;
+
+  return {
+    scopeKey: scope.key,
+    label: declared.label ?? scope.label,
+    sourcesHash: hashSources(scope.sources, scope.language),
+  };
+}
+
+/**
+ * Read the auxiliary artifact manifests present under `<archDir>/query/` and
+ * project them into the `auxArtifacts` block of the main manifest.
+ *
+ * Returns undefined when no artifact has been persisted (or none is readable),
+ * so analysis without auxiliary runs writes an unchanged manifest. All readers
+ * are failure-tolerant: a broken artifact is skipped, never rethrown.
+ */
+async function collectAuxArtifacts(
+  archDir: string,
+  scopes: QueryScopeEntry[],
+  globalScopeKey: string | undefined
+): Promise<AuxArtifactsBlock | undefined> {
+  const block: AuxArtifactsBlock = {};
+
+  const add = (
+    kind: AuxArtifactKind,
+    declared: DeclaredAuxIdentity & { generatedAt?: unknown }
+  ): void => {
+    if (typeof declared.generatedAt !== 'string' || declared.generatedAt.length === 0) return;
+    const identity = resolveAuxIdentity(scopes, globalScopeKey, declared);
+    if (!identity) return;
+    const entries = block[kind] ?? (block[kind] = []);
+    entries.push({ ...identity, generatedAt: declared.generatedAt });
+  };
+
+  for (const record of await readDuplicatesArtifacts(archDir)) {
+    add('duplicates', {
+      scopeKey: record.scopeKey ?? record.manifest.scopeKey,
+      label: record.manifest.label,
+      sources: record.manifest.sources,
+      language: record.manifest.language,
+      generatedAt: record.manifest.generatedAt,
+    });
+  }
+
+  const shapeSmells = await readShapeSmellManifest(archDir);
+  if (shapeSmells) add('shape-smells', shapeSmells);
+
+  const history = await readHistoryManifest(archDir);
+  if (history) add('git-history', history);
+
+  const kinds = Object.keys(block) as AuxArtifactKind[];
+  if (kinds.length === 0) return undefined;
+
+  for (const kind of kinds) {
+    block[kind]?.sort(
+      (a, b) => a.scopeKey.localeCompare(b.scopeKey) || a.generatedAt.localeCompare(b.generatedAt)
+    );
+  }
+  return block;
+}
+
+// ---------------------------------------------------------------------------
 // Persist query scopes + manifest
 // ---------------------------------------------------------------------------
 
@@ -349,11 +490,17 @@ export async function persistQueryScopes(
       ? options.preferredGlobalScopeKey
       : selectGlobalScopeKey(mergedList);
 
+  // Record which auxiliary artifacts already exist on disk so consumers can
+  // detect stale duplicates / shape-smells / git-history results without
+  // re-running them (analyze itself never rewrites those directories).
+  const auxArtifacts = await collectAuxArtifacts(resolvedDir, mergedList, globalScopeKey);
+
   const manifest: QueryManifest = {
     version: '1.0',
     generatedAt: new Date().toISOString(),
     globalScopeKey,
     scopes: mergedList,
+    ...(auxArtifacts ? { auxArtifacts } : {}),
   };
 
   // Manifest first: a crash mid-way leaves orphan directories, never dangling

@@ -7,7 +7,7 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import type { ShapeSmellAnalysis, LiteralDispersionSmell } from './types.js';
+import type { ShapeSmellAnalysis, ShapeSmellManifest, LiteralDispersionSmell } from './types.js';
 import { errorMessage } from '@/utils/error-message.js';
 
 const SHAPE_SMELLS_SUBDIR = 'query/shape-smells';
@@ -79,6 +79,40 @@ export async function loadResults(archDir: string): Promise<ShapeSmellAnalysis |
   } catch (err: unknown) {
     const message = errorMessage(err);
     throw new Error(`Failed to load shape-smell results from ${dir}: ${message}`);
+  }
+}
+
+/**
+ * The shape-smell artifact manifest, with optional provenance fields that
+ * newer writers may record.
+ */
+export interface ShapeSmellArtifactManifest extends ShapeSmellManifest {
+  /** Sources the analysis was run against, when recorded. */
+  sources?: string[];
+  /** Language of those sources, when recorded. */
+  language?: string;
+}
+
+/**
+ * Read the shape-smell artifact manifest from `query/shape-smells/manifest.json`.
+ *
+ * Returns null when the file is absent or unreadable. Never throws: a broken
+ * auxiliary artifact must not make `analyze` fail.
+ */
+export async function readShapeSmellManifest(
+  archDir: string
+): Promise<ShapeSmellArtifactManifest | null> {
+  const manifestPath = path.join(shapeSmellsDir(archDir), MANIFEST_FILE);
+  if (!(await fs.pathExists(manifestPath))) return null;
+
+  try {
+    return (await fs.readJson(manifestPath)) as ShapeSmellArtifactManifest;
+  } catch (err: unknown) {
+    const message = errorMessage(err);
+    console.warn(
+      `[shape-smells] Ignoring unreadable artifact manifest ${manifestPath}: ${message}`
+    );
+    return null;
   }
 }
 
