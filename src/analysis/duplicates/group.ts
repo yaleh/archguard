@@ -14,6 +14,7 @@ import {
   type DuplicateAnalysis,
   type DuplicateGroup,
   type DuplicateOptions,
+  type DuplicateScopeRef,
 } from './types.js';
 
 const SOURCE_EXTENSIONS = ['ts', 'tsx', 'mts', 'cts'];
@@ -155,11 +156,16 @@ export function collectSourceFiles(
 /**
  * Scan `sources` under `root` and return the duplicate analysis.
  * Paths on members are relative to `root`, POSIX-style.
+ *
+ * `scope` records which query scope the scan belongs to. Pass it whenever the
+ * sources came from a query manifest so the persisted result can be filed under
+ * that scope key; omit it only for a scope-less scan.
  */
 export async function detectDuplicates(
   root: string,
   sources: string[],
-  options: Partial<DuplicateOptions> = {}
+  options: Partial<DuplicateOptions> = {},
+  scope?: DuplicateScopeRef
 ): Promise<DuplicateAnalysis> {
   const opts = resolveDuplicateOptions(options);
   const files = collectSourceFiles(root, sources, opts.includeTests);
@@ -181,6 +187,7 @@ export async function detectDuplicates(
     manifest: {
       version: '1',
       generatedAt: new Date().toISOString(),
+      ...(scope ? { scopeKey: scope.key, label: scope.label } : {}),
       sources,
       scannedFiles: files.length,
       scannedFunctions: fingerprints.length,

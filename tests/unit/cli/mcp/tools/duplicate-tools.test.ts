@@ -3,7 +3,9 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { DuplicateAnalysis } from '@/analysis/duplicates/types.js';
+import type { DuplicateAnalysis, DuplicateManifest } from '@/analysis/duplicates/types.js';
+import { loadDuplicates } from '@/analysis/duplicates/persistence.js';
+import { hashSources } from '@/cli/processors/arch-json-utils.js';
 import { registerDuplicateTools } from '@/cli/mcp/tools/duplicate-tools.js';
 
 type Handler = (args: Record<string, unknown>) => Promise<{
@@ -11,17 +13,23 @@ type Handler = (args: Record<string, unknown>) => Promise<{
   content: Array<{ type: string; text: string }>;
 }>;
 
-function captureHandler(root: string): { handler: Handler; names: string[] } {
+function captureHandler(root: string): {
+  handler: Handler;
+  names: string[];
+  descriptions: Map<string, string>;
+} {
   const names: string[] = [];
+  const descriptions = new Map<string, string>();
   let handler: Handler = () => Promise.reject(new Error('tool not registered'));
   const server = {
-    tool: (name: string, _desc: string, _schema: unknown, h: Handler) => {
+    tool: (name: string, desc: string, _schema: unknown, h: Handler) => {
       names.push(name);
+      descriptions.set(name, desc);
       handler = h;
     },
   } as unknown as McpServer;
   registerDuplicateTools(server, root);
-  return { handler, names };
+  return { handler, names, descriptions };
 }
 
 const copy = (name: string, v: string): string =>
@@ -77,11 +85,118 @@ describe('archguard_detect_duplicates', () => {
     expect(strict.groups).toHaveLength(0);
   });
 
-  it('persists the result under .archguard/query/duplicates/', async () => {
+  it('persists the result under a per-scope directory and never in the legacy flat files', async () => {
     await captureHandler(root).handler({ minStatements: 6, minTokens: 50, topN: 20 });
-    expect(await fs.pathExists(path.join(root, '.archguard/query/duplicates/manifest.json'))).toBe(
-      true
+
+    const scopeKey = hashSources([path.join(root, 'src')], 'typescript');
+    const dupRoot = path.join(root, '.archguard/query/duplicates');
+    const manifest = (await fs.readJson(
+      path.join(dupRoot, scopeKey, 'manifest.json')
+    )) as DuplicateManifest;
+
+    expect(manifest.scopeKey).toBe(scopeKey);
+    expect(manifest.label).toBe('src (typescript)');
+    expect(await fs.pathExists(path.join(dupRoot, scopeKey, 'groups.json'))).toBe(true);
+    expect(await fs.pathExists(path.join(dupRoot, 'manifest.json'))).toBe(false);
+    expect(await fs.pathExists(path.join(dupRoot, 'groups.json'))).toBe(false);
+    expect((await loadDuplicates(path.join(root, '.archguard'), scopeKey))?.manifest).toEqual(
+      manifest
     );
+  });
+
+  it('documents the Type-1/2 blind spot in the tool description', () => {
+    const desc = captureHandler(root).descriptions.get('archguard_detect_duplicates') ?? '';
+    expect(desc).toContain('Type-1/2');
+    expect(desc).toMatch(/single-statement/i);
+    expect(desc).toContain('minStatements');
+  });
+
+  it('stores two scopes side by side and lists both in index.json (DoD)', async () => {
+    await fs.outputFile(path.join(root, 'other/x.ts'), copy('three', 'c'));
+    await fs.outputFile(path.join(root, 'other/y.ts'), copy('four', 'd'));
+    await fs.outputJson(path.join(root, '.archguard/query/manifest.json'), {
+      version: '1.0',
+      generatedAt: new Date().toISOString(),
+      globalScopeKey: 'aaaaaaaa',
+      scopes: [
+        {
+          key: 'aaaaaaaa',
+          label: 'src (typescript)',
+          language: 'typescript',
+          kind: 'parsed',
+          sources: ['src'],
+          entityCount: 1,
+          relationCount: 0,
+          hasAtlasExtension: false,
+        },
+        {
+          key: 'bbbbbbbb',
+          label: 'other (typescript)',
+          language: 'typescript',
+          kind: 'parsed',
+          sources: ['other'],
+          entityCount: 1,
+          relationCount: 0,
+          hasAtlasExtension: false,
+        },
+      ],
+    });
+
+    const { handler } = captureHandler(root);
+    const first = await handler({ scope: 'aaaaaaaa', minStatements: 6, minTokens: 50, topN: 20 });
+    const second = await handler({ scope: 'bbbbbbbb', minStatements: 6, minTokens: 50, topN: 20 });
+    expect(first.isError).toBeUndefined();
+    expect(second.isError).toBeUndefined();
+
+    const dupRoot = path.join(root, '.archguard/query/duplicates');
+    const dirs = (await fs.readdir(dupRoot, { withFileTypes: true }))
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+      .sort();
+    expect(dirs).toEqual(['aaaaaaaa', 'bbbbbbbb']);
+
+    const a = (await fs.readJson(
+      path.join(dupRoot, 'aaaaaaaa/manifest.json')
+    )) as DuplicateManifest;
+    const b = (await fs.readJson(
+      path.join(dupRoot, 'bbbbbbbb/manifest.json')
+    )) as DuplicateManifest;
+    expect(a).toMatchObject({
+      scopeKey: 'aaaaaaaa',
+      label: 'src (typescript)',
+      sources: ['src'],
+    });
+    expect(b).toMatchObject({
+      scopeKey: 'bbbbbbbb',
+      label: 'other (typescript)',
+      sources: ['other'],
+    });
+    expect((await loadDuplicates(path.join(root, '.archguard'), 'aaaaaaaa'))?.groups).toHaveLength(
+      1
+    );
+    expect((await loadDuplicates(path.join(root, '.archguard'), 'bbbbbbbb'))?.groups).toHaveLength(
+      1
+    );
+
+    const index = (await fs.readJson(path.join(dupRoot, 'index.json'))) as {
+      entries: Array<{ scopeKey: string; label: string; sources: string[]; generatedAt: string }>;
+    };
+    expect(index.entries.map((e) => e.scopeKey).sort()).toEqual(dirs);
+    expect(index.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          scopeKey: 'aaaaaaaa',
+          label: 'src (typescript)',
+          sources: ['src'],
+        }),
+        expect.objectContaining({
+          scopeKey: 'bbbbbbbb',
+          label: 'other (typescript)',
+          sources: ['other'],
+        }),
+      ])
+    );
+    for (const entry of index.entries) expect(typeof entry.generatedAt).toBe('string');
   });
 
   it('returns an explicit error when the scope does not exist', async () => {

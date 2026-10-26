@@ -36,9 +36,30 @@ export interface DuplicateOptions {
   includeTests: boolean;
 }
 
+/**
+ * Identity of the query scope a scan belongs to.
+ *
+ * `key` is the same 8-hex `hashSources` value as `QueryScopeEntry.key`, so the
+ * duplicate results can be filed next to the query artifacts they describe.
+ */
+export interface DuplicateScopeRef {
+  /** Normalized-sources hash, 8 hex chars (same formula as `QueryScopeEntry.key`). */
+  key: string;
+  /** Human-readable scope label, e.g. "src (typescript)". */
+  label: string;
+}
+
 export interface DuplicateManifest {
   version: '1';
   generatedAt: string;
+  /**
+   * Query scope identity. Present whenever the scan went through a scope-aware
+   * caller (`archguard_detect_duplicates`, `query --duplicates`); absent only for
+   * direct `detectDuplicates` calls that scan a path without a query scope.
+   */
+  scopeKey?: string;
+  /** Human-readable scope label matching `scopeKey`. */
+  label?: string;
   sources: string[];
   scannedFiles: number;
   scannedFunctions: number;

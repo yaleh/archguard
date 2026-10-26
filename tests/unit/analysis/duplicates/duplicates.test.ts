@@ -121,10 +121,151 @@ describe('duplicate detection', () => {
   });
 
   it('round-trips through persistence', async () => {
-    const analysis = await detectDuplicates(root, ['src']);
+    const analysis = await detectDuplicates(
+      root,
+      ['src'],
+      {},
+      {
+        key: 'deadbeef',
+        label: 'src (typescript)',
+      }
+    );
     const archDir = path.join(root, '.archguard');
     expect(await loadDuplicates(archDir)).toBeNull();
     await persistDuplicates(archDir, analysis);
+    expect(await loadDuplicates(archDir, 'deadbeef')).toEqual(analysis);
+    // Omitting the key is unambiguous while exactly one scope is persisted.
     expect(await loadDuplicates(archDir)).toEqual(analysis);
+  });
+
+  it('persists each scope in its own directory without overwriting the other', async () => {
+    await fs.outputFile(path.join(root, 'other/x.ts'), fn('collectX', 'x'));
+    await fs.outputFile(path.join(root, 'other/y.ts'), fn('collectY', 'y'));
+    const archDir = path.join(root, '.archguard');
+    const srcAnalysis = await detectDuplicates(
+      root,
+      ['src'],
+      {},
+      {
+        key: 'aaaaaaaa',
+        label: 'src (typescript)',
+      }
+    );
+    const otherAnalysis = await detectDuplicates(
+      root,
+      ['other'],
+      {},
+      {
+        key: 'bbbbbbbb',
+        label: 'other (typescript)',
+      }
+    );
+
+    await persistDuplicates(archDir, srcAnalysis);
+    await persistDuplicates(archDir, otherAnalysis);
+
+    const dupRoot = path.join(archDir, 'query/duplicates');
+    const a = (await fs.readJson(path.join(dupRoot, 'aaaaaaaa/manifest.json'))) as {
+      scopeKey: string;
+      label: string;
+      sources: string[];
+    };
+    const b = (await fs.readJson(path.join(dupRoot, 'bbbbbbbb/manifest.json'))) as {
+      scopeKey: string;
+      label: string;
+      sources: string[];
+    };
+    expect(a).toMatchObject({ scopeKey: 'aaaaaaaa', label: 'src (typescript)', sources: ['src'] });
+    expect(b).toMatchObject({
+      scopeKey: 'bbbbbbbb',
+      label: 'other (typescript)',
+      sources: ['other'],
+    });
+
+    expect((await loadDuplicates(archDir, 'aaaaaaaa'))?.manifest.sources).toEqual(['src']);
+    expect((await loadDuplicates(archDir, 'bbbbbbbb'))?.manifest.sources).toEqual(['other']);
+  });
+
+  it('indexes every persisted scope one-to-one with its directory', async () => {
+    const archDir = path.join(root, '.archguard');
+    for (const [key, sources, label] of [
+      ['aaaaaaaa', ['src'], 'src (typescript)'],
+      ['bbbbbbbb', ['src'], 'other label (typescript)'],
+    ] as const) {
+      await persistDuplicates(
+        archDir,
+        await detectDuplicates(root, [...sources], {}, { key, label })
+      );
+    }
+
+    const dupRoot = path.join(archDir, 'query/duplicates');
+    const dirs = (await fs.readdir(dupRoot, { withFileTypes: true }))
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+      .sort();
+    const index = (await fs.readJson(path.join(dupRoot, 'index.json'))) as {
+      version: string;
+      entries: Array<{
+        scopeKey: string;
+        label: string;
+        sources: string[];
+        generatedAt: string;
+      }>;
+    };
+
+    expect(index.version).toBe('1');
+    expect(index.entries.map((e) => e.scopeKey).sort()).toEqual(dirs);
+    for (const entry of index.entries) {
+      const manifest = (await fs.readJson(path.join(dupRoot, entry.scopeKey, 'manifest.json'))) as {
+        label: string;
+        sources: string[];
+        generatedAt: string;
+      };
+      expect(entry.label).toBe(manifest.label);
+      expect(entry.sources).toEqual(manifest.sources);
+      expect(entry.generatedAt).toBe(manifest.generatedAt);
+    }
+  });
+
+  it('stops writing the legacy flat files and pins the no-scopeKey load contract', async () => {
+    const archDir = path.join(root, '.archguard');
+    const analysis = await detectDuplicates(
+      root,
+      ['src'],
+      {},
+      {
+        key: 'aaaaaaaa',
+        label: 'src (typescript)',
+      }
+    );
+    await persistDuplicates(archDir, analysis);
+
+    const dupRoot = path.join(archDir, 'query/duplicates');
+    expect(await fs.pathExists(path.join(dupRoot, 'manifest.json'))).toBe(false);
+    expect(await fs.pathExists(path.join(dupRoot, 'groups.json'))).toBe(false);
+
+    // Explicit key that was never persisted → null.
+    expect(await loadDuplicates(archDir, 'ffffffff')).toBeNull();
+    // No key with exactly one persisted scope → that scope.
+    expect(await loadDuplicates(archDir)).toEqual(analysis);
+
+    // No key with several persisted scopes → the caller must choose.
+    await persistDuplicates(
+      archDir,
+      await detectDuplicates(root, ['src'], {}, { key: 'bbbbbbbb', label: 'other (typescript)' })
+    );
+    await expect(loadDuplicates(archDir)).rejects.toThrow(/Multiple duplicate scopes/);
+
+    // Nothing persisted at all → null.
+    await fs.remove(dupRoot);
+    expect(await loadDuplicates(archDir)).toBeNull();
+  });
+
+  it('refuses to persist an analysis whose manifest has no scopeKey', async () => {
+    const analysis = await detectDuplicates(root, ['src']);
+    expect(analysis.manifest.scopeKey).toBeUndefined();
+    await expect(persistDuplicates(path.join(root, '.archguard'), analysis)).rejects.toThrow(
+      /no scopeKey/
+    );
   });
 });
