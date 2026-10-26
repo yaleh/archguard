@@ -189,9 +189,7 @@ export function collectSourceFiles(
   if (!trackedOnly) return collected;
 
   const known = listGitKnownFiles(root);
-  return collected.filter(
-    (f) => !isResidualFile(f) && (known === null || known.has(f))
-  );
+  return collected.filter((f) => !isResidualFile(f) && (known === null || known.has(f)));
 }
 
 /**
