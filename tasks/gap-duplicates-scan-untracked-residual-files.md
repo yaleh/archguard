@@ -1,7 +1,7 @@
 ---
 id: gap-duplicates-scan-untracked-residual-files
 title: detect_duplicates 扫描范围纳入未跟踪残留文件：加 trackedOnly 选项（git ls-files 扫描集）
-status: ready
+status: done
 labels:
   - gap
   - defect
