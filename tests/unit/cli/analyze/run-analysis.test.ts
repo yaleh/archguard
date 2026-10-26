@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import type { Config } from '@/cli/config-loader.js';
 import type { DiagramResult } from '@/cli/processors/diagram-processor.js';
 import type { QueryScopeEntry } from '@/cli/query/query-manifest.js';
@@ -844,6 +847,95 @@ describe('runAnalysis', () => {
         '/tmp/project',
         expect.objectContaining({ pathFilter: undefined })
       );
+    });
+  });
+
+  describe('uncovered source directories (gap-analyze-uncovered-source-warning)', () => {
+    const COVERAGE_MARKER = 'not covered by any registered query scope';
+    let fixtureRoot: string;
+    let coveredSource: string;
+
+    function writeSource(relativePath: string): void {
+      const absolute = path.join(fixtureRoot, relativePath);
+      fs.mkdirSync(path.dirname(absolute), { recursive: true });
+      fs.writeFileSync(absolute, 'export const value = 1;\n');
+    }
+
+    function asCoveredScope(source: string): void {
+      normalizeToDiagramsMock.mockResolvedValue([
+        { name: 'fixture/overview/package', sources: [source], level: 'package' },
+      ]);
+      persistQueryScopesMock.mockResolvedValue([{ ...persistedEntry, sources: [source] }]);
+    }
+
+    async function run(): Promise<{
+      reporter: ReturnType<typeof silentReporter>;
+      warnings: string[];
+    }> {
+      const reporter = silentReporter();
+      const { runAnalysis } = await import('@/cli/analyze/run-analysis.js');
+      const result = await runAnalysis({
+        sessionRoot: fixtureRoot,
+        workDir: path.join(fixtureRoot, '.archguard'),
+        cliOptions: {},
+        reporter,
+      });
+      return { reporter, warnings: result.warnings ?? [] };
+    }
+
+    beforeEach(() => {
+      fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'archguard-uncovered-'));
+      coveredSource = path.join(fixtureRoot, 'src');
+      writeSource('src/core.ts');
+    });
+
+    afterEach(() => {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    });
+
+    it('warns with the uncovered directory and never names the covered one', async () => {
+      writeSource('shared/util.ts');
+      asCoveredScope(coveredSource);
+
+      const { reporter, warnings } = await run();
+
+      const message = reporter.warn.mock.calls
+        .map((call) => String(call[0]))
+        .find((text) => text.includes(COVERAGE_MARKER));
+      expect(message).toBeDefined();
+      expect(message).toContain('shared/');
+      expect(message).not.toContain('src/');
+      expect(warnings).toContain(message);
+    });
+
+    it('stays silent when every TypeScript source directory is covered', async () => {
+      writeSource('src/nested/deep.ts');
+      asCoveredScope(coveredSource);
+
+      const { reporter } = await run();
+
+      expect(reporter.warn).not.toHaveBeenCalledWith(expect.stringContaining(COVERAGE_MARKER));
+    });
+
+    it('ignores files under the default exclusions and declaration files', async () => {
+      writeSource('dist/bundle.ts');
+      writeSource('node_modules/some-pkg/index.ts');
+      writeSource('src/legacy.d.ts');
+      writeSource('src/core.test.ts');
+      asCoveredScope(coveredSource);
+
+      const { reporter } = await run();
+
+      expect(reporter.warn).not.toHaveBeenCalledWith(expect.stringContaining(COVERAGE_MARKER));
+    });
+
+    it('skips the scan when the registered scopes live outside the session root', async () => {
+      writeSource('shared/util.ts');
+      asCoveredScope('/elsewhere/other-project');
+
+      const { reporter } = await run();
+
+      expect(reporter.warn).not.toHaveBeenCalledWith(expect.stringContaining(COVERAGE_MARKER));
     });
   });
 });

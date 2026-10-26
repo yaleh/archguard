@@ -1,7 +1,7 @@
 ---
 id: gap-duplicates-per-scope-persistence
 title: detect_duplicates 按 scope 分目录持久化：manifest 记 scopeKey/label，避免不同 scope 互相覆盖
-status: ready
+status: needs-human
 labels:
   - gap
   - defect
@@ -52,3 +52,14 @@ extra:
 - 未落地原因：step=suite: suite red
 - run_id：wk-prod-anchor
 - session_id：4000ec73-f60d-45db-a09b-d746706831de
+
+## Needs-Human
+
+**执行 2026-10-26T05:49:51.501Z — 停派终止（失败无法归因，⛔ 不再重派）**
+
+- 阻碍原因：exited-not-landed 失败无法归因（基建/契约疑似，非实现缺陷）——停止重派，⛔ 不再拿新会话撞同一堵墙：suite red could not be attributed to any failing test file in 2 consecutive rounds (bounded to at most one retry) — infra/contract suspected, not an implementable defect (parser extracted 0 of 0 failing lines and attributed none to a file); stopping instead of spending another worker session
+- 失败步/判词：step=suite: suite red
+- run_id：wk-prod-anchor
+- session_id：8ef60e8d-466f-47c3-992e-17d24afb17db
+- suite 日志：/data/home/yale/work/archguard/.quay/fan-in-suite-gap-duplicates-per-scope-persistence~wk-prod-anchor~1792993353073-4f674f.log
+- fan-in 日志：/data/home/yale/work/archguard/.quay/fan-in-gap-duplicates-per-scope-persistence-wk-prod-anchor.log

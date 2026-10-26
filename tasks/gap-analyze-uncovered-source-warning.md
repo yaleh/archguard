@@ -1,7 +1,7 @@
 ---
 id: gap-analyze-uncovered-source-warning
 title: analyze 对根目录未被任何 scope 覆盖的 .ts 源码给出告警
-status: ready
+status: done
 labels:
   - gap
   - cli
@@ -32,11 +32,3 @@ extra:
 - tasks/gap-analyze-uncovered-source-warning.md
 - src/cli/analyze/run-analysis.ts
 - tests/unit/cli/analyze/run-analysis.test.ts
-
-## Blocker
-
-**2026-10-26T05:38:46.898Z — worker 未落地（exited-not-landed）**
-
-- 未落地原因：step=suite: suite red
-- run_id：wk-prod-anchor
-- session_id：a9fcabc0-8a02-4145-b5f8-ec16dbc8c8ce

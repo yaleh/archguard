@@ -1,4 +1,5 @@
 import path from 'path';
+import { globby } from 'globby';
 import { ConfigLoader } from '../config-loader.js';
 import type { Config } from '../config-loader.js';
 import type { CLIOptions, DiagramConfig } from '@/types/config.js';
@@ -45,6 +46,8 @@ import type { ParseWorkerLanguage } from '@/parser/parse-worker-pool.js';
 import type { ArchJSON } from '@/types/index.js';
 import { computeArchHealth } from './arch-health.js';
 import type { ArchHealthOutcome } from './arch-health.js';
+import { DEFAULT_EXCLUDE_PATTERNS } from '../utils/default-excludes.js';
+import { realpathOrSelf } from '../processors/arch-json-utils.js';
 
 /**
  * Load and initialize the plugin for a language, injecting the parser backend
@@ -145,6 +148,73 @@ function isPartialRun(cliOptions: Partial<CLIOptions>): boolean {
   const hasLevelFilter = Array.isArray(cliOptions.diagrams) && cliOptions.diagrams.length > 0;
   const hasSourceOverride = Array.isArray(cliOptions.sources) && cliOptions.sources.length > 0;
   return hasLevelFilter || hasSourceOverride;
+}
+
+/** TypeScript extensions scanned for the advisory coverage check. */
+const SOURCE_SCAN_EXTENSIONS = 'ts,tsx';
+
+/** Declaration files are never analyzed as project source. */
+const SOURCE_SCAN_EXTRA_EXCLUDES = ['**/*.d.ts'];
+
+/** True when `candidate` is `root` itself or lives below it (both absolute). */
+function isPathInside(root: string, candidate: string): boolean {
+  const relative = path.relative(root, candidate);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+/**
+ * Directories under `rootDir` that contain TypeScript source files outside
+ * every registered query-scope source.
+ *
+ * Returns paths relative to `rootDir`, each with a trailing slash (`shared/`;
+ * `.` for files sitting directly in the root), sorted. The built-in default
+ * exclusions (node_modules / dist / vendor / archive, test/spec files) and
+ * `.d.ts` are applied so files the parsers never analyze cannot produce a
+ * false warning.
+ */
+export async function findUncoveredSourceDirectories(
+  rootDir: string,
+  scopeSources: readonly string[],
+  excludePatterns: readonly string[] = DEFAULT_EXCLUDE_PATTERNS
+): Promise<string[]> {
+  const root = realpathOrSelf(path.resolve(rootDir));
+  const coverageRoots = scopeSources.map((source) => realpathOrSelf(path.resolve(root, source)));
+  if (coverageRoots.length === 0) return [];
+
+  const ignore = [...new Set([...excludePatterns, ...SOURCE_SCAN_EXTRA_EXCLUDES])]
+    .filter((pattern) => !pattern.startsWith('!'))
+    .map((pattern) => `!${pattern}`);
+  const rootGlob = root.replace(/\\/g, '/');
+
+  let files: string[];
+  try {
+    files = await globby([`${rootGlob}/**/*.{${SOURCE_SCAN_EXTENSIONS}}`, ...ignore], {
+      absolute: true,
+      onlyFiles: true,
+      followSymbolicLinks: false,
+    });
+  } catch {
+    return [];
+  }
+
+  const uncoveredDirs = new Set<string>();
+  for (const file of files) {
+    const absolute = realpathOrSelf(path.resolve(file));
+    if (coverageRoots.some((coverage) => isPathInside(coverage, absolute))) continue;
+    const relativeDir = path.dirname(path.relative(root, absolute)).replace(/\\/g, '/');
+    uncoveredDirs.add(relativeDir === '.' ? '.' : `${relativeDir}/`);
+  }
+  return [...uncoveredDirs].sort();
+}
+
+/** One-line advisory naming the TypeScript directories no query scope covers. */
+export function formatUncoveredSourceWarning(dirs: string[]): string {
+  const noun = dirs.length === 1 ? 'directory is' : 'directories are';
+  return (
+    `[analyze] ${dirs.length} TypeScript source ${noun} not covered by any registered query scope: ` +
+    `${dirs.join(', ')}. Files there are absent from the diagrams and duplicate detection; ` +
+    'add them with -s/--sources or config.diagrams if they are production source.'
+  );
 }
 
 /**
@@ -365,6 +435,39 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<RunAnaly
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       reporter.warn(`[query] Failed to persist query scopes: ${msg}`);
+    }
+  }
+
+  // Advisory coverage check (gap-analyze-uncovered-source-warning): after the
+  // scopes are registered, name the root-level TypeScript directories no scope
+  // covers. Auto-detection only recognizes well-known source roots, so loose
+  // source trees (e.g. `shared/`, `scripts/`) would otherwise be analyzed by
+  // nothing and reported by nothing. Warn only — scope selection is unchanged.
+  if (persistedScopes.length > 0) {
+    const root = realpathOrSelf(path.resolve(sessionRoot));
+    const scopeSources = persistedScopes.flatMap((entry) => entry.sources);
+    // The comparison is only meaningful when the registered scopes live under
+    // the session root (a `-s /outside/path` run analyzes another project).
+    const rootedAtSessionRoot = scopeSources.every((source) =>
+      isPathInside(root, realpathOrSelf(path.resolve(root, source)))
+    );
+    if (rootedAtSessionRoot) {
+      try {
+        const uncovered = await findUncoveredSourceDirectories(root, scopeSources, [
+          ...DEFAULT_EXCLUDE_PATTERNS,
+          ...(config.exclude ?? []),
+        ]);
+        if (uncovered.length > 0) {
+          const message = formatUncoveredSourceWarning(uncovered);
+          warnings.push(message);
+          reporter.warn(message);
+        }
+      } catch (err) {
+        if (config.verbose) {
+          const msg = err instanceof Error ? err.message : String(err);
+          reporter.warn(`[analyze] Uncovered-source check failed: ${msg}`);
+        }
+      }
     }
   }
 

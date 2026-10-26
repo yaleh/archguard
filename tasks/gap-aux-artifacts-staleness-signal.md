@@ -42,3 +42,11 @@ extra:
 - src/cli/git-history/history-writer.ts
 - tests/unit/cli/query/query-manifest.test.ts
 - tests/unit/cli/query/query-artifacts.test.ts
+
+## Blocker
+
+**2026-10-26T05:39:52.879Z — worker 未落地（exited-not-landed）**
+
+- 未落地原因：step=suite: suite red
+- run_id：wk-prod-anchor
+- session_id：a9fb1ed9-66e3-49b5-9a0f-c8823db10fca
