@@ -5,6 +5,25 @@ All notable changes to ArchGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.44] - 2026-10-26
+
+### Added
+- **detect_duplicates 按 scope 分目录持久化** — 结果写入 `.archguard/query/duplicates/<scopeKey>/`，
+  manifest 记 `scopeKey`/`label`，新增 `index.json` 列出各 scope 的 label/sources/generatedAt；
+  修复不同 scope 依次运行结果互相覆盖的缺陷。
+- **detect_duplicates `trackedOnly` 选项** — 为 true 时扫描集取 `git ls-files` 命中的 .ts，
+  排除未跟踪的残留脚手架（如 `__criterion-falsify-*`）。
+- **analyze 未覆盖源码告警** — 根目录未被任何 scope 覆盖的含 .ts 目录在 analyze 收尾打印 warn。
+
+### Changed
+- **主 query manifest 增加 `auxArtifacts` 块** — 记录 duplicates/shape-smells/git-history 的
+  generatedAt + scopeKey/sourcesHash，消费方可机械判断辅助产物是否过期。
+- **detect_duplicates 文档盲区说明** — 工具描述注明仅精确结构克隆（Type-1/2）、不覆盖单语句/极小函数。
+
+### Internal
+- 层守卫升级为 ratchet：目录级 SCC 基线 + 新目录叶子规则 + manifest/PIN 双登记（测试）。
+- 新增普查型 ratchet census：超大文件 / 模块级可变状态 / 单语句 helper 副本（测试）。
+
 ## [0.1.43] - 2026-10-22
 
 ### Changed
