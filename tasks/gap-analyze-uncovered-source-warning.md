@@ -18,10 +18,10 @@ extra:
 
 ## AC
 
-- [ ] analyze 收尾（默认输出或 verbose）对根下未落入任何已注册 scope sources 的含 .ts 目录打印一条 warn，并列出目录名；`npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例断言 warn 出现/不出现
-- [ ] 合成夹具：根下 `src/`（被覆盖）与 `shared/`（未覆盖）各含 .ts；analyze 后 warn 提到 `shared/` 而不提 `src/`
-- [ ] 默认排除（node_modules/dist/.d.ts/test 文件）内的文件不触发 warn；夹具含一个 `dist/` 下 .ts 不被计入
-- [ ] `npm run type-check` 通过
+- [x] analyze 收尾（默认输出或 verbose）对根下未落入任何已注册 scope sources 的含 .ts 目录打印一条 warn，并列出目录名；`npx vitest run tests/unit/cli/analyze/run-analysis.test.ts` exit 0，新增用例断言 warn 出现/不出现
+- [x] 合成夹具：根下 `src/`（被覆盖）与 `shared/`（未覆盖）各含 .ts；analyze 后 warn 提到 `shared/` 而不提 `src/`
+- [x] 默认排除（node_modules/dist/.d.ts/test 文件）内的文件不触发 warn；夹具含一个 `dist/` 下 .ts 不被计入
+- [x] `npm run type-check` 通过
 
 ## DoD
 
