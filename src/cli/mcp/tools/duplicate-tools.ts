@@ -110,8 +110,16 @@ export function registerDuplicateTools(server: McpServer, defaultRoot: string): 
         .optional()
         .default(false)
         .describe('Include test files (*.test.*, *.spec.*, tests/). Default false.'),
+      trackedOnly: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe(
+          'Restrict the scan to files git knows about (git ls-files --cached --others ' +
+            '--exclude-standard), dropping __* residual scaffolding files. Default false.'
+        ),
     },
-    async ({ projectRoot, scope, minStatements, minTokens, topN, includeTests }) => {
+    async ({ projectRoot, scope, minStatements, minTokens, topN, includeTests, trackedOnly }) => {
       try {
         const root = resolveRoot(projectRoot, defaultRoot);
         const analysis = await runDuplicateDetection(root, scope, {
@@ -119,6 +127,7 @@ export function registerDuplicateTools(server: McpServer, defaultRoot: string): 
           minTokens,
           topN,
           includeTests,
+          trackedOnly,
         });
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(analysis, null, 2) }],

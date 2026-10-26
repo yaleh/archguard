@@ -34,6 +34,12 @@ export interface DuplicateOptions {
   topN?: number;
   /** Include test files (*.test.*, *.spec.*, tests/, __tests__/). Default false. */
   includeTests: boolean;
+  /**
+   * Restrict the scan to files git knows about — the `git ls-files --cached --others
+   * --exclude-standard` set — instead of every file the directory glob finds. Untracked
+   * leftover scaffolding named `__*` is dropped in this mode. Default false.
+   */
+  trackedOnly: boolean;
 }
 
 export interface DuplicateManifest {
@@ -56,4 +62,5 @@ export const DEFAULT_DUPLICATE_OPTIONS: DuplicateOptions = {
   minStatements: 6,
   minTokens: 50,
   includeTests: false,
+  trackedOnly: false,
 };
