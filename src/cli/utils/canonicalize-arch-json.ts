@@ -1,13 +1,6 @@
 import type { ArchJSON, Entity, Member, Module, Relation, ArchJSONMetrics } from '@/types/index.js';
 
 /**
- * Normalize a path-ish string to posix separators.
- */
-function toPosix(value: string): string {
-  return value.replace(/\\/g, '/');
-}
-
-/**
  * Build the id/path normalizer for one ArchJSON.
  *
  * Write-side identity normalization (gap-entity-id-relative-normalization):
@@ -34,13 +27,12 @@ function toPosix(value: string): string {
  *   untouched (external ids, bare entity names, opaque relation ids).
  */
 function createWorkspaceNormalizer(workspaceRoot?: string): (value: string) => string {
-  const root = workspaceRoot ? toPosix(workspaceRoot).replace(/\/+$/, '') : '';
-  if (!root) return toPosix;
-  const prefix = `${root}/`;
+  const root = workspaceRoot ? workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '') : '';
+  const prefix = root ? `${root}/` : '';
   return (value: string) => {
     if (!value) return value;
-    const posix = toPosix(value);
-    return posix.includes(prefix) ? posix.split(prefix).join('') : posix;
+    const posix = value.replace(/\\/g, '/');
+    return prefix && posix.includes(prefix) ? posix.split(prefix).join('') : posix;
   };
 }
 
