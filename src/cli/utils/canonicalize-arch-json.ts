@@ -1,26 +1,87 @@
 import type { ArchJSON, Entity, Member, Module, Relation, ArchJSONMetrics } from '@/types/index.js';
 
+/**
+ * Build the id/path normalizer for one ArchJSON.
+ *
+ * Write-side identity normalization (gap-entity-id-relative-normalization):
+ * the same analysis run can emit entity ids in two shapes — Path A
+ * (`TypeScriptParser.parseProject`, package-level diagrams) relativizes ids
+ * against the analysis root, while Path B (the parallel parser / worker path)
+ * can leak absolute ids because the worker-side plugin does not receive the
+ * per-scope workspace root (see the Path B note in `parallel-parser.ts`).
+ * Persisted arch.json then contained `/data/home/.../x.ts.Name` for a
+ * subdirectory scope and `dir/x.ts.Name` for its parent scope, so consumers
+ * that key by id or group by the id prefix produced bogus groups such as
+ * `data (159)`.
+ *
+ * `canonicalizeArchJson` is the single choke point every persisted ArchJSON
+ * passes through (query scopes, disk cache, JSON diagram output), so the
+ * normalization belongs here rather than at each reader.
+ *
+ * Rules:
+ * - an id/path under `workspaceRoot` becomes workspace-relative;
+ * - all separators become `/` (also for values that are already relative);
+ * - every occurrence of the root prefix is stripped, because relation ids
+ *   embed both endpoints (`<source>_<type>_<target>`);
+ * - anything that does not name the workspace root is left semantically
+ *   untouched (external ids, bare entity names, opaque relation ids).
+ */
+function createWorkspaceNormalizer(workspaceRoot?: string): (value: string) => string {
+  const root = workspaceRoot ? workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '') : '';
+  const prefix = root ? `${root}/` : '';
+  return (value: string) => {
+    if (!value) return value;
+    const posix = value.replace(/\\/g, '/');
+    return prefix && posix.includes(prefix) ? posix.split(prefix).join('') : posix;
+  };
+}
+
 export function canonicalizeArchJson(archJson: ArchJSON): ArchJSON {
+  const normalize = createWorkspaceNormalizer(archJson.workspaceRoot);
+
   return {
     ...archJson,
     sourceFiles: [...(archJson.sourceFiles ?? [])].sort(),
-    entities: [...(archJson.entities ?? [])].map(canonicalizeEntity).sort(compareEntity),
-    relations: [...(archJson.relations ?? [])].sort(compareRelation),
+    entities: [...(archJson.entities ?? [])]
+      .map((entity) => canonicalizeEntity(entity, normalize))
+      .sort(compareEntity),
+    relations: [...(archJson.relations ?? [])]
+      .map((relation) => canonicalizeRelation(relation, normalize))
+      .sort(compareRelation),
     modules: archJson.modules
-      ? [...archJson.modules].map(canonicalizeModule).sort(compareModule)
+      ? [...archJson.modules]
+          .map((module) => canonicalizeModule(module, normalize))
+          .sort(compareModule)
       : undefined,
     metrics: archJson.metrics ? canonicalizeMetrics(archJson.metrics) : archJson.metrics,
     extensions: canonicalizeExtensions(archJson.extensions),
   };
 }
 
-function canonicalizeEntity(entity: Entity): Entity {
+function canonicalizeEntity(entity: Entity, normalize: (value: string) => string): Entity {
   return {
     ...entity,
+    id: normalize(entity.id),
+    sourceLocation: entity.sourceLocation
+      ? { ...entity.sourceLocation, file: normalize(entity.sourceLocation.file) }
+      : entity.sourceLocation,
     genericParams: entity.genericParams ? [...entity.genericParams].sort() : entity.genericParams,
     extends: entity.extends ? [...entity.extends].sort() : entity.extends,
     implements: entity.implements ? [...entity.implements].sort() : entity.implements,
     members: [...(entity.members ?? [])].map(canonicalizeMember).sort(compareMember),
+  };
+}
+
+function canonicalizeRelation(relation: Relation, normalize: (value: string) => string): Relation {
+  // `source`/`target` reference entity ids; `id` embeds them
+  // (`<source>_<type>_<target>`). Both must move to the same coordinate or the
+  // graph breaks — an entity id renamed without its relation endpoints leaves
+  // an edge pointing at an id no index entry owns.
+  return {
+    ...relation,
+    id: normalize(relation.id),
+    source: normalize(relation.source),
+    target: normalize(relation.target),
   };
 }
 
@@ -30,12 +91,14 @@ function canonicalizeMember(member: Member): Member {
   };
 }
 
-function canonicalizeModule(module: Module): Module {
+function canonicalizeModule(module: Module, normalize: (value: string) => string): Module {
   return {
     ...module,
-    entities: [...(module.entities ?? [])].sort(),
+    entities: [...(module.entities ?? [])].map(normalize).sort(),
     submodules: module.submodules
-      ? [...module.submodules].map(canonicalizeModule).sort(compareModule)
+      ? [...module.submodules]
+          .map((submodule) => canonicalizeModule(submodule, normalize))
+          .sort(compareModule)
       : module.submodules,
   };
 }
