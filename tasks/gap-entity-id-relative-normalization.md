@@ -1,7 +1,7 @@
 ---
 id: gap-entity-id-relative-normalization
 title: entity.id 相对/绝对形态不一致（Path A 相对、Path B 绝对），子目录 scope 100% 绝对 id 污染消费方分组
-status: ready
+status: done
 labels:
   - gap
   - defect
@@ -77,11 +77,3 @@ extra:
 - src/parser/parallel-parser.ts
 - tests/unit/cli/utils/canonicalize-arch-json.test.ts
 - tests/unit/parser/parallel-parser.test.ts
-
-## Blocker
-
-**2026-11-05T15:55:23.503Z — worker 未落地（exited-not-landed）**
-
-- 未落地原因：step=suite: suite red
-- run_id：wk-prod-anchor
-- session_id：d7f90d35-b52f-406c-844f-47a7e8eb8286
