@@ -60,9 +60,9 @@ extra:
 - #8 `atlas-analytics-tools.ts` `"localeCompare"`: 0 → 1；`"keep the package graph node order"`: 0 → 1
 - #9 `test-analysis-tools.ts` `"zero detected"`: 0 → 1；`"performance-type test files"`: 0 → 1
 
-负对照：`git diff --stat develop...HEAD` = 6 files, +33/−6，逐 hunk 核对均落在 6 个 MCP tool 文件的 description 字符串字面量内；无实现常数、分支或输出变更。`tsc --noEmit` 通过；6 个相关 MCP unit test 文件共 209 例通过（全量套件由 fan-in 机械步骤复跑）。
+负对照：`git diff --stat develop...HEAD` = 6 files, +29/−8，逐 hunk 核对均落在 6 个 MCP tool 文件的 description 字符串字面量内；无实现常数、分支或输出变更。`tsc --noEmit` 通过；`eslint src/cli/mcp/mcp-server.ts` 通过；`tests/unit/cli/mcp/` 22 files / 384 tests 通过；`tests/unit/architecture/hygiene-ratchet-census.test.ts` 8/8 通过（`src/cli/mcp/mcp-server.ts` 保持 881 行，未上调 hygiene 基线）；`tests/integration/parser-pool.test.ts` 单独复跑 6/6 通过（约 40s；fan-in 全量套件同窗口的 150s 超时是既有负载 flake）。全量套件由 fan-in 机械步骤复跑。
 
-- L_D docLines=0 codeLines=39 ratio=0.000 verdict=ok（实现 commit 的 numstat：39 行 .ts 描述字符串改动、0 行 .md/.txt；doc:code = 0:39）
+- L_D docLines=0 codeLines=29 ratio=0.000 verdict=ok（实现 diff 的 numstat：29 行 .ts 描述字符串改动、0 行 .md/.txt；doc:code = 0:29）
 
 外部 no-D 双模型探针仍待 quay-fleet；执行者只保证描述文本已含对应事实，不代写外部探针结论。
 
