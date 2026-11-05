@@ -57,7 +57,9 @@ export function registerShapeSmellTools(server: McpServer, defaultRoot: string):
     'archguard_detect_shape_smells',
     'Detect shape smells (currently: literal dispersion) in a TypeScript project.' +
       'Literal dispersion identifies enum/string-union values compared across multiple ' +
-      'modules, indicating a missing structured abstraction and Shotgun Surgery risk.' +
+      'modules, indicating a missing structured abstraction and Shotgun Surgery risk. ' +
+      'Severity: a smell with dispersion=2 (present in exactly 2 files) is info; dispersion>=3 ' +
+      '(3 or more files) is warning. ' +
       'Layers 2 (hidden-coupling) and 3 (enum-extension-impact) are deferred.',
     {
       projectRoot: z
@@ -185,7 +187,8 @@ export function registerShapeSmellTools(server: McpServer, defaultRoot: string):
     'archguard_get_literal_dispersion',
     'Query persisted literal-dispersion results. Returns smells from a prior ' +
       'archguard_detect_shape_smells run. Supports filtering by typeName, value, ' +
-      'and minimum dispersion.',
+      'and minimum dispersion. Each smell carries its severity: dispersion=2 → info, ' +
+      'dispersion>=3 → warning.',
     {
       projectRoot: z
         .string()

@@ -107,8 +107,16 @@ export function registerDuplicateTools(server: McpServer, defaultRoot: string): 
       'expressions, methods and nested functions — exported or not. Returns duplicate groups ' +
       '(hash, token count, members with file/startLine/endLine/name/kind) ranked by savable ' +
       'lines. Test files, .d.ts and dist/ are excluded by default. ' +
-      'Blind spot: only exact structural clones (Type-1/2) are detected; single-statement ' +
-      'and very small functions below the minStatements/minTokens floor are not covered.',
+      'Threshold: a function is considered only when its body has at least 6 statements AND ' +
+      'at least 50 normalized tokens (defaults; minStatements/minTokens override them). ' +
+      'Blind spot: only exact structural clones (Type-1/2) are detected; a single-statement ' +
+      'function, or any function below either floor (for example a 3-5 line helper), is not reported. ' +
+      'Persistence: results are filed per query scope under .archguard/query/duplicates/ — ' +
+      'index.json lists every persisted scope, and each scope owns <scopeKey>/manifest.json ' +
+      'plus <scopeKey>/groups.json. The old flat layout (duplicates/manifest.json + ' +
+      'duplicates/groups.json) is no longer written because it let scopes overwrite each other. ' +
+      'A persistence (disk-write) failure is non-fatal: it only logs a warning and the query ' +
+      'still returns its normal results; analysis failures still return an error.',
     {
       projectRoot: z
         .string()

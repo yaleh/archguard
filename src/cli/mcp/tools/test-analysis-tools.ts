@@ -222,7 +222,10 @@ export function registerTestAnalysisTools(server: McpServer, defaultRoot: string
 
   server.tool(
     'archguard_get_test_issues',
-    'Return static-analysis test quality issues (orphan_test, zero_assertion, skip_accumulation); ' +
+    'Return static-analysis test quality issues (orphan_test, zero_assertion, skip_accumulation). ' +
+      'zero_assertion means a test file that has at least one test case but zero detected ' +
+      'assertions; performance-type test files (benchmarks) are exempt because they intentionally ' +
+      'assert nothing. ' +
       'orphan_test and zero_assertion results may include false positives when tests use import ' +
       'aliases, custom assertion helpers, or long setup blocks. Call archguard_detect_test_patterns first.',
     {

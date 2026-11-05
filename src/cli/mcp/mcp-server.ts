@@ -687,8 +687,8 @@ export function registerTools(server: McpServer, defaultRoot: string): void {
       '(CycleInfo[]). "package" returns a directory-granularity result ' +
       '{ granularity: "package", evaluated, reason?, cycles: [{ size, modules }] } — when the ' +
       'scope has no directory-level edges (non-TS languages, Go Atlas) it returns ' +
-      'evaluated:false with a reason, so "not evaluated" is never conflated with "no cycles". ' +
-      'For Go: the compiler prevents import cycles, so the class/method result will be empty.',
+      'evaluated:false with a reason, so "not evaluated" is never conflated with "no cycles". In ' +
+      '"package" mode each node is one directory (every file in that directory collapses into the node), and cycles are strongly connected components of directory-level import edges. Only an edge that closes a loop back to the importing directory is part of a cycle: an import from a shared/utils layer into a feature-layer root bucket (which itself imports back into the shared layer) closes a cycle, while an import into a leaf directory (for example tools/configs) that nothing under it imports back does not. For Go: the compiler prevents import cycles, so the class/method result will be empty.',
     {
       projectRoot: projectRootParam,
       scope: scopeParam,

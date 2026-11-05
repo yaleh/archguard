@@ -2,7 +2,7 @@
 id: gap-self-describe-residual-atoms-in-mcp-descriptions
 title: 把 DSI 8 条残差原子自述进 MCP tool description（duplicates 阈值/布局/非致命、drift
   分级、dispersion severity、god_packages 排序、zero_assertion 定义、cycles 叶子边）
-status: ready
+status: done
 labels:
   - gap
   - docs

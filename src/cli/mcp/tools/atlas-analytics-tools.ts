@@ -254,6 +254,9 @@ export function registerAtlasAnalyticsTools(server: McpServer, defaultRoot: stri
       'Each flagged package includes a list of violated thresholds (reasons). ' +
       'Go Atlas scopes use the package graph (fanIn/structs/functions/files); TypeScript scopes use ' +
       'relation-based fanIn/fanOut plus package file/entity counts, returning { applicable: true, godPackages }. ' +
+      'Ordering: TypeScript scopes sort godPackages by number of violated thresholds (descending), ' +
+      'then fan-out (descending), then package name (localeCompare). Go Atlas scopes do NOT sort — ' +
+      'they keep the package graph node order, so do not read their order as a ranking. ' +
       'Other scopes return { applicable: false, reason, alternative }.',
     {
       projectRoot: z
