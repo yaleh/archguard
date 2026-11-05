@@ -38,4 +38,15 @@ export interface QueryScopeEntry {
 
   /** Optional role hint used to identify primary vs secondary scopes. */
   role?: 'primary' | 'secondary';
+
+  /**
+   * True when at least one of `sources` (realpath-resolved) lies outside the
+   * project root, i.e. outside the directory that contains `.archguard`.
+   *
+   * Multi-source analysis of another directory is legitimate, so such scopes
+   * are still registered and queryable; the marker only keeps them from being
+   * chosen as the manifest's `globalScopeKey` (see `selectGlobalScopeKey`).
+   * Absent on in-project scopes and on manifests written by older versions.
+   */
+  outsideProjectRoot?: boolean;
 }
