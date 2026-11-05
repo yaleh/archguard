@@ -63,3 +63,11 @@ extra:
 - tasks/gap-multi-source-scope-visibility-mcp-desc.md
 - src/cli/mcp/analyze-tool.ts
 - tests/unit/cli/mcp/analyze-tool.test.ts
+
+## Blocker
+
+**2026-11-05T16:25:18.925Z — worker 未落地（exited-not-landed）**
+
+- 未落地原因：step=suite: suite red
+- run_id：wk-prod-anchor
+- session_id：bc82d66b-16ec-47e5-b7c7-686c9ba02188
