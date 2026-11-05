@@ -221,7 +221,11 @@ export function registerArchHealthDriftTool(server: McpServer, defaultRoot: stri
       'arch-health history required; (2) snapshot — resolve fromCommit/toCommit via ' +
       '.archguard/arch-health-history.json and re-analyze both commits on demand. Returns ' +
       '{ report, hasBreakingDrift, breakingEntities } (ref mode also sets evaluated: true); a missing ' +
-      'or unresolvable ref pair returns { evaluated: false, reason, hint }.',
+      'or unresolvable ref pair returns { evaluated: false, reason, hint }. ' +
+      'Severity levels (per-entity drift value): <0.5 stable, >=0.5 moderate, >=1.5 significant, ' +
+      '>=3.0 critical. This level classification is a separate reading from the drift gate: ' +
+      'drift-exit-code breaches when any entity drift >= its threshold (default 3.0) — the same ' +
+      'number as the critical band, but it answers "is this a breach?" rather than "which level?".',
     {
       projectRoot: z
         .string()
