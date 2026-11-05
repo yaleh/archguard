@@ -1,7 +1,7 @@
 ---
 id: gap-query-scope-parent-metadata
 title: query scope 无包含关系元数据：嵌套 scope 重复且消费方只能靠路径猜 parentScopeKey
-status: ready
+status: done
 labels:
   - gap
   - query
