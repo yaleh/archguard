@@ -69,3 +69,11 @@ extra:
 - tests/unit/cli/query/query-artifacts.test.ts
 - tests/unit/cli/query/query-manifest.test.ts
 - tests/unit/cli/query/engine-loader.test.ts
+
+## Blocker
+
+**2026-11-05T16:08:32.578Z — worker 未落地（exited-not-landed）**
+
+- 未落地原因：step=suite: suite red
+- run_id：wk-prod-anchor
+- session_id：f1ec3bd8-3f5a-45b2-b3a4-9fdcb94e67f5
