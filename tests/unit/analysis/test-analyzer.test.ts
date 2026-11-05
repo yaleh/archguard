@@ -644,6 +644,236 @@ describe('TestAnalyzer - totalAssertions field (C++ rounding fix)', () => {
   });
 });
 
+describe('TestAnalyzer - entityCoverageRatio denominator dedupes duplicate ids', () => {
+  it('counts unique entity ids, not raw array length', async () => {
+    // archJson.entities may carry duplicate ids (same class across source sets).
+    // Denominator must be the distinct id set so the ratio reflects unique entities.
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const workspaceRoot = '/workspace';
+    const plugin = makePlugin(['.ts']);
+    const filePath = `${workspaceRoot}/src/a.test.ts`;
+
+    // 3 entities, one of which appears twice in the array (duplicate id).
+    const archJson = makeArchJson([
+      { id: 'a.A', name: 'A', type: 'class', sourceLocation: { file: 'src/a/A.ts', startLine: 1, endLine: 10 } },
+      { id: 'b.B', name: 'B', type: 'class', sourceLocation: { file: 'src/b/B.ts', startLine: 1, endLine: 10 } },
+      { id: 'c.C', name: 'C', type: 'class', sourceLocation: { file: 'src/c/C.ts', startLine: 1, endLine: 10 } },
+      { id: 'a.A', name: 'A', type: 'class', sourceLocation: { file: 'src/a/A.ts', startLine: 1, endLine: 10 } }, // dup
+    ]);
+
+    const analyzer = new TestAnalyzer();
+    vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue([filePath]);
+    vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([
+      makeRawTestFile(filePath, {
+        testTypeHint: 'unit',
+        testCases: [{ name: 't', isSkipped: false, assertionCount: 1 }],
+        importedSourceFiles: ['src/a/A.ts'],
+      }),
+    ]);
+
+    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot });
+    // coveredEntities = { a.A }; unique ids = { a.A, b.B, c.C } = 3 → 1/3
+    expect(result.metrics.entityCoverageRatio).toBeCloseTo(1 / 3, 5);
+  });
+});
+
+describe('TestAnalyzer - same-package inference (Java FooTest → com.x.Foo)', () => {
+  it('links same-package target even when test has no imports', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const workspaceRoot = '/repo';
+    const plugin = makePlugin(['.java']);
+    const filePath = `${workspaceRoot}/app/src/test/java/com/example/calc/CalculatorTest.java`;
+
+    const archJson = makeArchJson([
+      {
+        id: 'com.example.calc.Calculator',
+        name: 'Calculator',
+        type: 'class',
+        sourceLocation: {
+          file: `${workspaceRoot}/app/src/main/java/com/example/calc/Calculator.java`,
+          startLine: 1,
+          endLine: 50,
+        },
+      },
+    ]);
+
+    const analyzer = new TestAnalyzer();
+    vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue([filePath]);
+    vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([
+      makeRawTestFile(filePath, {
+        testTypeHint: 'unit',
+        testCases: [{ name: 'adds', isSkipped: false, assertionCount: 1 }],
+        // No imports at all — coverage must come from same-package inference.
+        importedSourceFiles: [],
+        samePackageTargets: ['com.example.calc.Calculator'],
+      }),
+    ]);
+
+    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot });
+    expect(result.testFiles[0].coveredEntityIds).toContain('com.example.calc.Calculator');
+    // Not an orphan — it now has a coverage link.
+    const orphanIssues = result.issues.filter((i) => i.type === 'orphan_test');
+    expect(orphanIssues).toHaveLength(0);
+  });
+
+  it('ignores samePackageTargets that do not exist in arch.json', async () => {
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const workspaceRoot = '/repo';
+    const plugin = makePlugin(['.java']);
+    const filePath = `${workspaceRoot}/app/src/test/java/com/example/calc/CalculatorTest.java`;
+
+    const archJson = makeArchJson([]); // no entities
+
+    const analyzer = new TestAnalyzer();
+    vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue([filePath]);
+    vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([
+      makeRawTestFile(filePath, {
+        testTypeHint: 'unit',
+        testCases: [{ name: 'adds', isSkipped: false, assertionCount: 1 }],
+        importedSourceFiles: [],
+        samePackageTargets: ['com.example.calc.Calculator'],
+      }),
+    ]);
+
+    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot });
+    expect(result.testFiles[0].coveredEntityIds).toHaveLength(0);
+  });
+
+  it('links variant-descriptor test to its base class via prefix shortening', async () => {
+    // SprayHomeHeadViewPureTest → samePackageTargets ['com.x.SprayHomeHeadViewPure']
+    // The tested class is SprayHomeHeadView (variant descriptor "Pure" stripped).
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const workspaceRoot = '/repo';
+    const plugin = makePlugin(['.java']);
+    const filePath = `${workspaceRoot}/app/src/test/java/com/x/SprayHomeHeadViewPureTest.java`;
+
+    const archJson = makeArchJson([
+      {
+        id: 'com.x.SprayHomeHeadView',
+        name: 'SprayHomeHeadView',
+        type: 'class',
+        sourceLocation: {
+          file: `${workspaceRoot}/app/src/main/java/com/x/SprayHomeHeadView.java`,
+          startLine: 1,
+          endLine: 50,
+        },
+      },
+    ]);
+
+    const analyzer = new TestAnalyzer();
+    vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue([filePath]);
+    vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([
+      makeRawTestFile(filePath, {
+        testTypeHint: 'unit',
+        testCases: [{ name: 'render', isSkipped: false, assertionCount: 1 }],
+        importedSourceFiles: [],
+        samePackageTargets: ['com.x.SprayHomeHeadViewPure'],
+      }),
+    ]);
+
+    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot });
+    expect(result.testFiles[0].coveredEntityIds).toContain('com.x.SprayHomeHeadView');
+  });
+
+  it('greedy prefix matching picks the longest available same-package class', async () => {
+    // com.x.SprayHomeHeadViewPure shortens to SprayHomeHeadView (present) — the
+    // longest match wins, not a shorter ambiguous prefix.
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const workspaceRoot = '/repo';
+    const plugin = makePlugin(['.java']);
+    const filePath = `${workspaceRoot}/app/src/test/java/com/x/SprayHomeHeadViewPureTest.java`;
+
+    const archJson = makeArchJson([
+      {
+        id: 'com.x.SprayHomeHeadView',
+        name: 'SprayHomeHeadView',
+        type: 'class',
+        sourceLocation: {
+          file: `${workspaceRoot}/app/src/main/java/com/x/SprayHomeHeadView.java`,
+          startLine: 1,
+          endLine: 50,
+        },
+      },
+      {
+        id: 'com.x.SprayHomeHead',
+        name: 'SprayHomeHead',
+        type: 'class',
+        sourceLocation: {
+          file: `${workspaceRoot}/app/src/main/java/com/x/SprayHomeHead.java`,
+          startLine: 1,
+          endLine: 50,
+        },
+      },
+    ]);
+
+    const analyzer = new TestAnalyzer();
+    vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue([filePath]);
+    vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([
+      makeRawTestFile(filePath, {
+        testTypeHint: 'unit',
+        testCases: [{ name: 'render', isSkipped: false, assertionCount: 1 }],
+        importedSourceFiles: [],
+        samePackageTargets: ['com.x.SprayHomeHeadViewPure'],
+      }),
+    ]);
+
+    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot });
+    // Greedy longest-prefix match: SprayHomeHeadView (the real target), not the
+    // shorter SprayHomeHead that also shares a prefix.
+    expect(result.testFiles[0].coveredEntityIds).toContain('com.x.SprayHomeHeadView');
+    expect(result.testFiles[0].coveredEntityIds).not.toContain('com.x.SprayHomeHead');
+  });
+
+  it('links same-package direct-reference targets (Bean/Pojo aggregate tests)', async () => {
+    // BeanBasicDataTest constructs BaseUnitBean and ConnectionBean via `new`
+    // (same package, no import) — both must be linked as covered entities.
+    const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');
+    const workspaceRoot = '/repo';
+    const plugin = makePlugin(['.java']);
+    const filePath = `${workspaceRoot}/fjspray/src/test/java/com/x/bean/BeanBasicDataTest.java`;
+
+    const archJson = makeArchJson([
+      {
+        id: 'com.x.bean.BaseUnitBean',
+        name: 'BaseUnitBean',
+        type: 'class',
+        sourceLocation: {
+          file: `${workspaceRoot}/fjspray/src/main/java/com/x/bean/BaseUnitBean.java`,
+          startLine: 1,
+          endLine: 10,
+        },
+      },
+      {
+        id: 'com.x.bean.ConnectionBean',
+        name: 'ConnectionBean',
+        type: 'class',
+        sourceLocation: {
+          file: `${workspaceRoot}/fjspray/src/main/java/com/x/bean/ConnectionBean.java`,
+          startLine: 1,
+          endLine: 10,
+        },
+      },
+    ]);
+
+    const analyzer = new TestAnalyzer();
+    vi.spyOn(analyzer as any, 'discoverTestFiles').mockResolvedValue([filePath]);
+    vi.spyOn(analyzer as any, 'collectRawTestFiles').mockResolvedValue([
+      makeRawTestFile(filePath, {
+        testTypeHint: 'unit',
+        testCases: [{ name: 'build', isSkipped: false, assertionCount: 1 }],
+        importedSourceFiles: [],
+        samePackageTargets: ['com.x.bean.BaseUnitBean', 'com.x.bean.ConnectionBean'],
+      }),
+    ]);
+
+    const result = await analyzer.analyze(archJson, plugin, { workspaceRoot });
+    expect(result.testFiles[0].coveredEntityIds).toContain('com.x.bean.BaseUnitBean');
+    expect(result.testFiles[0].coveredEntityIds).toContain('com.x.bean.ConnectionBean');
+    const orphanIssues = result.issues.filter((i) => i.type === 'orphan_test');
+    expect(orphanIssues).toHaveLength(0);
+  });
+});
+
 describe('TestAnalyzer - C++ relative import path normalization (Fix ../ paths)', () => {
   it('resolves "../src/llama-grammar.h" from tests/ to src/llama-grammar entity', async () => {
     const { TestAnalyzer } = await import('@/analysis/test-analyzer.js');

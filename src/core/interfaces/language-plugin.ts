@@ -47,6 +47,14 @@ export interface RawTestFile {
    * when few assertions are spread across many test functions, e.g. C++).
    */
   totalAssertions?: number;
+  /**
+   * Candidate fully-qualified entity ids that the test file's own package implies
+   * it tests (same-package inference, Java: FooTest in pkg com.x implies it covers
+   * com.x.Foo). Set by plugins that know the test class's package + name. These are
+   * merged into coveredEntityIds when they match arch.json entities — this catches
+   * same-package tests that never import the class under test.
+   */
+  samePackageTargets?: string[];
 }
 
 /**
