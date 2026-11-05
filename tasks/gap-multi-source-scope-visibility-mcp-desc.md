@@ -2,7 +2,7 @@
 id: gap-multi-source-scope-visibility-mcp-desc
 title: archguard_analyze sources 描述未写明「每 source 独立 scope、跨 scope 边不可见」（DSI
   B3，docs 已写 MCP desc 漏）
-status: todo
+status: ready
 labels:
   - gap
   - docs
