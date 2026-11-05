@@ -3,6 +3,10 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { persistQueryScopes } from '@/cli/query/query-artifacts.js';
+import {
+  QUERY_MANIFEST_VERSION,
+  SUPPORTED_QUERY_MANIFEST_VERSIONS,
+} from '@/cli/query/query-manifest.js';
 import type {
   QueryManifest,
   QueryScopeEntry,
@@ -195,6 +199,47 @@ describe('QueryScopeEntry generatedAt', () => {
     } finally {
       await fs.remove(dir);
     }
+  });
+});
+
+describe('parentScopeKey schema (manifest 1.1)', () => {
+  it('writes 1.1 while still accepting legacy 1.0 manifests', () => {
+    expect(QUERY_MANIFEST_VERSION).toBe('1.1');
+    expect(SUPPORTED_QUERY_MANIFEST_VERSIONS).toEqual(['1.0', '1.1']);
+  });
+
+  it('accepts parentScopeKey as an optional entry field', () => {
+    const child: QueryScopeEntry = {
+      key: 'cccc3333',
+      label: 'src/cli (typescript)',
+      language: 'typescript',
+      kind: 'parsed',
+      sources: ['/proj/src/cli'],
+      entityCount: 2,
+      relationCount: 0,
+      hasAtlasExtension: false,
+      parentScopeKey: 'aaaa1111',
+    };
+    const root: QueryScopeEntry = {
+      ...child,
+      key: 'aaaa1111',
+      label: 'proj (typescript)',
+      sources: ['/proj'],
+    };
+    delete (root as { parentScopeKey?: string }).parentScopeKey;
+
+    const manifest: QueryManifest = {
+      version: QUERY_MANIFEST_VERSION,
+      generatedAt: '2026-11-05T00:00:00.000Z',
+      globalScopeKey: root.key,
+      scopes: [root, child],
+    };
+
+    // Walk the chain the way a consumer would: no path heuristics involved.
+    const parentOf = (key: string): string | undefined =>
+      manifest.scopes.find((s) => s.key === key)?.parentScopeKey;
+    expect(parentOf(child.key)).toBe(root.key);
+    expect(parentOf(root.key)).toBeUndefined();
   });
 });
 

@@ -151,6 +151,12 @@ export interface AvailableScope {
   entityCount: number;
   /** ISO-8601 timestamp of when this scope was last written (absent in older manifests). */
   generatedAt?: string;
+  /**
+   * Direct containing scope (manifest version >= 1.1). Absent for root scopes
+   * and for scopes disjoint from every other scope; consumers walk the chain
+   * until it is absent to reach the outermost scope.
+   */
+  parentScopeKey?: string;
 }
 
 export interface QueryContext {
@@ -174,13 +180,36 @@ export function resolveArchDir(archDir?: string): string {
 
 /**
  * Read the manifest.json from the query directory.
+ *
+ * Schema versions `1.0` (legacy: `parentScopeKey` never appears) and `1.1`
+ * (scopes may carry `parentScopeKey`) are both loaded as-is: the field is
+ * optional, so consumers can always read a manifest regardless of which writer
+ * produced it. Unknown newer versions are also accepted — refusing them would
+ * make an old reader fail outright on a newer, still-compatible shape.
  */
 export async function readManifest(archDir: string): Promise<QueryManifest> {
   const manifestPath = path.join(archDir, 'query', 'manifest.json');
   if (!(await fs.pathExists(manifestPath))) {
     throw new Error('No query data found. Run `archguard analyze` first.');
   }
-  return fs.readJson(manifestPath) as Promise<QueryManifest>;
+  const manifest = (await fs.readJson(manifestPath)) as QueryManifest;
+  if (!manifest || !Array.isArray(manifest.scopes)) {
+    throw new Error(
+      `Malformed query manifest at ${manifestPath}: "scopes" must be an array. Run \`archguard analyze\` to regenerate.`
+    );
+  }
+  return manifest;
+}
+
+/** Project a manifest scope onto the compact scope listing. */
+function toAvailableScope(scope: QueryScopeEntry): AvailableScope {
+  return {
+    key: scope.key,
+    label: scope.label,
+    entityCount: scope.entityCount,
+    generatedAt: scope.generatedAt,
+    ...(scope.parentScopeKey ? { parentScopeKey: scope.parentScopeKey } : {}),
+  };
 }
 
 /**
@@ -359,12 +388,7 @@ export async function loadEngine(archDir: string, scopeKey?: string): Promise<Qu
     generatedAt: manifest.generatedAt,
     staleness: computeStaleness(manifest.generatedAt, readGitHead(projectRoot)),
   };
-  const availableScopes: AvailableScope[] = manifest.scopes.map((s) => ({
-    key: s.key,
-    label: s.label,
-    entityCount: s.entityCount,
-    generatedAt: s.generatedAt,
-  }));
+  const availableScopes: AvailableScope[] = manifest.scopes.map(toAvailableScope);
   return {
     engine,
     extensionAccessor,
@@ -441,12 +465,7 @@ async function loadMergedEngine(
     staleness: computeStaleness(manifest.generatedAt, readGitHead(projectRoot)),
   };
   const availableScopes: AvailableScope[] = [
-    ...manifest.scopes.map((s) => ({
-      key: s.key,
-      label: s.label,
-      entityCount: s.entityCount,
-      generatedAt: s.generatedAt,
-    })),
+    ...manifest.scopes.map(toAvailableScope),
     {
       key: scopeEntry.key,
       label: scopeEntry.label,

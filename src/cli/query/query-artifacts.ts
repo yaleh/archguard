@@ -9,6 +9,7 @@ import type {
   QueryScopeEntry,
   QuerySourceGroup,
 } from './query-manifest.js';
+import { QUERY_MANIFEST_VERSION } from './query-manifest.js';
 import { buildArchIndex } from './arch-index-builder.js';
 import { canonicalizeArchJson } from '../utils/canonicalize-arch-json.js';
 import { hashSources, realpathOrSelf } from '../processors/arch-json-utils.js';
@@ -245,6 +246,136 @@ interface MergedIdentity {
   dataKey: string;
   /** Every key previously used for this identity (including the canonical one). */
   previousKeys: Set<string>;
+}
+
+// ---------------------------------------------------------------------------
+// Scope containment — parentScopeKey
+// ---------------------------------------------------------------------------
+
+/** Resolve one source path to an absolute realpath (relative routes against the project root). */
+function resolveSourcePath(source: string, projectRoot: string): string {
+  const absolute = path.isAbsolute(source) ? source : path.resolve(projectRoot, source);
+  return realpathOrSelf(absolute);
+}
+
+/**
+ * Whether `childPath` is `parentPath` or lies below it.
+ *
+ * Segment-aware: `/a/bc` is *not* inside `/a/b`. Both paths are expected to be
+ * absolute and already realpath-resolved by the caller.
+ */
+export function isPathInside(childPath: string, parentPath: string): boolean {
+  const relative = path.relative(path.resolve(parentPath), path.resolve(childPath));
+  if (relative === '') return true;
+  return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+}
+
+/**
+ * Depth at which `parentSources` covers every `childSources` entry, or
+ * undefined when at least one child source lies outside every parent source.
+ *
+ * The depth is the *shallowest* covering parent root (string length), so a
+ * parent that only covers a child at the project root scores lower than one
+ * rooted directly at the child's directory.
+ */
+function coverageDepth(childSources: string[], parentSources: string[]): number | undefined {
+  let shallowest = Number.POSITIVE_INFINITY;
+  for (const childSource of childSources) {
+    let deepest = -1;
+    for (const parentSource of parentSources) {
+      if (isPathInside(childSource, parentSource)) {
+        deepest = Math.max(deepest, parentSource.length);
+      }
+    }
+    if (deepest < 0) return undefined;
+    shallowest = Math.min(shallowest, deepest);
+  }
+  return shallowest;
+}
+
+interface ResolvedScopeSources {
+  entry: QueryScopeEntry;
+  sources: string[];
+}
+
+/**
+ * Compute the immediate container of every scope in `entries`.
+ *
+ * A candidate is a parent when it covers all of the child's sources (path
+ * containment after realpath normalization) and is not itself contained in the
+ * child — i.e. a strict superset. Equal source sets therefore never form a
+ * chain. Containment is only meaningful within one language: a scope's ArchJSON
+ * covers entities of its own language, so a TypeScript root does not "contain"
+ * a Go fixture directory that happens to sit under it.
+ *
+ * Among all strict supersets the most specific one wins (deepest coverage,
+ * then fewer source roots, then key order) — `/proj/src/cli` points at
+ * `/proj/src`, never at `/proj`. Root scopes and scopes disjoint from every
+ * other scope are absent from the returned map.
+ *
+ * Sources are resolved against `projectRoot` when relative, and always
+ * realpath-resolved, so symlink aliases of the same directory compare equal.
+ */
+export function computeParentScopeKeys(
+  entries: QueryScopeEntry[],
+  projectRoot: string
+): Map<string, string> {
+  const resolved: ResolvedScopeSources[] = entries.map((entry) => ({
+    entry,
+    sources: (entry.sources ?? []).map((source) => resolveSourcePath(source, projectRoot)),
+  }));
+
+  const parents = new Map<string, string>();
+
+  for (const child of resolved) {
+    if (child.sources.length === 0) continue;
+
+    let best: { key: string; depth: number; sourceCount: number } | undefined;
+    for (const candidate of resolved) {
+      if (candidate.entry.key === child.entry.key) continue;
+      if (candidate.entry.language !== child.entry.language) continue;
+      if (candidate.sources.length === 0) continue;
+
+      const depth = coverageDepth(child.sources, candidate.sources);
+      if (depth === undefined) continue;
+
+      // Strict: a candidate that itself sits inside the child (equal source set
+      // included) is not a superset, so it cannot be the parent.
+      if (coverageDepth(candidate.sources, child.sources) !== undefined) continue;
+
+      const sourceCount = candidate.sources.length;
+      const better =
+        best === undefined ||
+        depth > best.depth ||
+        (depth === best.depth && sourceCount < best.sourceCount) ||
+        (depth === best.depth &&
+          sourceCount === best.sourceCount &&
+          candidate.entry.key.localeCompare(best.key) < 0);
+      if (better) best = { key: candidate.entry.key, depth, sourceCount };
+    }
+
+    if (best) parents.set(child.entry.key, best.key);
+  }
+
+  return parents;
+}
+
+/**
+ * Attach the recomputed `parentScopeKey` to each entry, dropping links that no
+ * longer resolve (a pruned parent or a moved scope must not leave a dangling
+ * chain behind).
+ */
+export function applyParentScopeKeys(
+  entries: QueryScopeEntry[],
+  projectRoot: string
+): QueryScopeEntry[] {
+  const parents = computeParentScopeKeys(entries, projectRoot);
+  return entries.map((entry) => {
+    const parentScopeKey = parents.get(entry.key);
+    if (parentScopeKey) return { ...entry, parentScopeKey };
+    const { parentScopeKey: _stale, ...rest } = entry;
+    return rest;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -543,6 +674,10 @@ export async function persistQueryScopes(
   }
 
   const mergedList = Array.from(mergedEntries.values()).sort((a, b) => a.key.localeCompare(b.key));
+  // Containment is re-derived from the filesystem on every persist so a moved or
+  // pruned scope cannot leave a stale link. The global selection only looks at
+  // width/kind, so it is unaffected by the parent links.
+  const scopedList = applyParentScopeKeys(mergedList, projectRoot);
   // Without a primary scope in this run, re-select over the merged list (widest parsed scope)
   // instead of carrying over the previous key, which would otherwise go stale forever.
   const globalScopeKey =
@@ -556,10 +691,10 @@ export async function persistQueryScopes(
   const auxArtifacts = await collectAuxArtifacts(resolvedDir, mergedList, globalScopeKey);
 
   const manifest: QueryManifest = {
-    version: '1.0',
+    version: QUERY_MANIFEST_VERSION,
     generatedAt: new Date().toISOString(),
     globalScopeKey,
-    scopes: mergedList,
+    scopes: scopedList,
     ...(auxArtifacts ? { auxArtifacts } : {}),
   };
 
@@ -653,10 +788,20 @@ export async function pruneQueryScopes(
     const globalScopeKey = remaining.some((s) => s.key === manifest.globalScopeKey)
       ? manifest.globalScopeKey
       : selectGlobalScopeKey(remaining);
+    // Removing a scope can orphan or shorten containment chains, so the links
+    // are re-derived over the survivors rather than carried over.
+    const projectRoot = path.dirname(
+      path.resolve(workDir || path.join(process.cwd(), '.archguard'))
+    );
+    const parented = applyParentScopeKeys(remaining, projectRoot);
     // Manifest first: a crash mid-way leaves orphan dirs, never dangling entries.
     await atomicWriteFile(
       manifestPath,
-      JSON.stringify({ ...manifest, globalScopeKey, scopes: remaining }, null, 2)
+      JSON.stringify(
+        { ...manifest, version: QUERY_MANIFEST_VERSION, globalScopeKey, scopes: parented },
+        null,
+        2
+      )
     );
     for (const s of removed) {
       await fs.remove(path.join(queryDir, s.key));

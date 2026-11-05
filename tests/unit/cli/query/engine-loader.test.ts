@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
-import { resolveScope, loadEngine } from '@/cli/query/engine-loader.js';
+import { resolveScope, loadEngine, readManifest } from '@/cli/query/engine-loader.js';
 import { buildArchIndex } from '@/cli/query/arch-index-builder.js';
 import type { QueryManifest, QueryScopeEntry } from '@/cli/query/query-manifest.js';
 import type { ArchJSON } from '@/types/index.js';
@@ -322,5 +322,34 @@ describe('loadEngine scope metadata', () => {
       { key: 'scope-1', label: 'src', entityCount: 100 },
       { key: 'scope-2', label: 'lib', entityCount: 30 },
     ]);
+  });
+
+  it('carries parentScopeKey from the manifest into the scope listing', async () => {
+    await writeManifest([{ ...scope1, parentScopeKey: 'root0001' }, scope2]);
+    await writeScopeArchJson('scope-1', makeArchJson());
+
+    const ctx = await loadEngine(tmpDir);
+
+    expect(ctx.scopeEntry.parentScopeKey).toBe('root0001');
+    expect(ctx.availableScopes.find((s) => s.key === 'scope-1')?.parentScopeKey).toBe('root0001');
+    // Scopes without a parent keep the field absent rather than empty.
+    expect(ctx.availableScopes.find((s) => s.key === 'scope-2')).not.toHaveProperty(
+      'parentScopeKey'
+    );
+  });
+
+  it('loads a legacy 1.0 manifest (no parentScopeKey anywhere)', async () => {
+    await fs.outputJson(path.join(tmpDir, 'query', 'manifest.json'), {
+      version: '1.0',
+      generatedAt: new Date().toISOString(),
+      globalScopeKey: 'scope-1',
+      scopes: [scope1, scope2],
+    });
+
+    const manifest = await readManifest(tmpDir);
+
+    expect(manifest.version).toBe('1.0');
+    expect(manifest.scopes.map((s) => s.key)).toEqual(['scope-1', 'scope-2']);
+    expect(manifest.scopes.every((s) => !('parentScopeKey' in s))).toBe(true);
   });
 });

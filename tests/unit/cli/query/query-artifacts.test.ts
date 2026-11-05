@@ -7,9 +7,11 @@ import {
   atomicWriteFile,
   generateScopeLabel,
   buildManifestEntry,
+  isPathInside,
   persistQueryScopes,
 } from '@/cli/query/query-artifacts.js';
 import type { QueryScopeInput } from '@/cli/query/query-artifacts.js';
+import { QUERY_MANIFEST_VERSION } from '@/cli/query/query-manifest.js';
 import { hashSources } from '@/cli/processors/arch-json-utils.js';
 import { loadEngine } from '@/cli/query/engine-loader.js';
 
@@ -474,7 +476,7 @@ describe('persistQueryScopes', () => {
     }
   });
 
-  it('manifest version is "1.0"', async () => {
+  it('manifest version is "1.1"', async () => {
     const dir = makeTmpDir();
     tmpDirs.push(dir);
 
@@ -488,7 +490,8 @@ describe('persistQueryScopes', () => {
     ]);
 
     const manifest = await fs.readJson(path.join(dir, 'query', 'manifest.json'));
-    expect(manifest.version).toBe('1.0');
+    expect(manifest.version).toBe(QUERY_MANIFEST_VERSION);
+    expect(manifest.version).toBe('1.1');
   });
 
   it('no .tmp. files remain after successful persist', async () => {
@@ -679,6 +682,150 @@ describe('persistQueryScopes project-root scoping (outsideProjectRoot)', () => {
     expect(entryOf(manifest, outKey)?.outsideProjectRoot).toBe(true);
     expect(entryOf(manifest, inKey)).not.toHaveProperty('outsideProjectRoot');
     expect(manifest.globalScopeKey).toBe(inKey);
+  });
+});
+
+describe('persistQueryScopes parentScopeKey containment', () => {
+  const readManifest = async (workDir: string) =>
+    fs.readJson(path.join(workDir, 'query', 'manifest.json'));
+  const entryOf = (manifest: { scopes: Array<{ key: string }> }, key: string) =>
+    manifest.scopes.find((scope) => scope.key === key) as
+      | { key: string; parentScopeKey?: string }
+      | undefined;
+
+  const archWith = (n: number) =>
+    makeArchJson({
+      entities: Array.from({ length: n }, (_, i) => ({
+        ...makeArchJson().entities[0],
+        id: `E${i}`,
+        name: `E${i}`,
+      })),
+      relations: [],
+    });
+
+  /** `<project>/.archguard` plus `<project>/src/cli`, all real directories. */
+  const makeProjectTree = () => {
+    const projectRoot = makeTmpDir();
+    tmpDirs.push(projectRoot);
+    const workDir = path.join(projectRoot, '.archguard');
+    const src = path.join(projectRoot, 'src');
+    const cli = path.join(src, 'cli');
+    fs.ensureDirSync(cli);
+    return { projectRoot, workDir, src, cli };
+  };
+
+  it('compares path prefixes at segment boundaries only', () => {
+    expect(isPathInside('/proj/src/cli', '/proj/src')).toBe(true);
+    expect(isPathInside('/proj/src', '/proj/src')).toBe(true);
+    expect(isPathInside('/proj/src2', '/proj/src')).toBe(false);
+    expect(isPathInside('/proj/src', '/proj/src/cli')).toBe(false);
+  });
+
+  it('links each scope to its direct container and leaves the root unlinked', async () => {
+    const { projectRoot, workDir, src, cli } = makeProjectTree();
+
+    await persistQueryScopes(workDir, [
+      { key: 'root', sources: [projectRoot], archJson: archWith(9), kind: 'parsed' },
+      { key: 'src', sources: [src], archJson: archWith(5), kind: 'parsed' },
+      { key: 'cli', sources: [cli], archJson: archWith(2), kind: 'parsed' },
+    ]);
+
+    const manifest = await readManifest(workDir);
+    expect(manifest.version).toBe('1.1');
+    // Direct parent, not the outermost scope: cli → src → root.
+    expect(entryOf(manifest, 'src')?.parentScopeKey).toBe('root');
+    expect(entryOf(manifest, 'cli')?.parentScopeKey).toBe('src');
+    // Absent (not an empty string) for the scope nothing contains.
+    expect(entryOf(manifest, 'root')).not.toHaveProperty('parentScopeKey');
+  });
+
+  it('resolves symlink aliases before judging containment', async () => {
+    const { projectRoot, workDir, src } = makeProjectTree();
+    const alias = path.join(projectRoot, 'src-alias');
+    fs.symlinkSync(src, alias);
+
+    await persistQueryScopes(workDir, [
+      { key: 'root', sources: [projectRoot], archJson: archWith(9), kind: 'parsed' },
+      { key: 'src', sources: [alias], archJson: archWith(5), kind: 'parsed' },
+    ]);
+
+    const manifest = await readManifest(workDir);
+    expect(entryOf(manifest, 'src')?.parentScopeKey).toBe('root');
+  });
+
+  it('does not link disjoint scopes', async () => {
+    const { projectRoot, workDir } = makeProjectTree();
+    const go = path.join(projectRoot, 'fixtures-go');
+    const java = path.join(projectRoot, 'fixtures-java');
+    fs.ensureDirSync(go);
+    fs.ensureDirSync(java);
+
+    await persistQueryScopes(workDir, [
+      { key: 'go-fixture', sources: [go], archJson: archWith(3), kind: 'parsed' },
+      { key: 'java-fixture', sources: [java], archJson: archWith(4), kind: 'parsed' },
+    ]);
+
+    const manifest = await readManifest(workDir);
+    expect(entryOf(manifest, 'go-fixture')).not.toHaveProperty('parentScopeKey');
+    expect(entryOf(manifest, 'java-fixture')).not.toHaveProperty('parentScopeKey');
+  });
+
+  it('does not let a scope contain another language’s scope', async () => {
+    const { projectRoot, workDir } = makeProjectTree();
+    const go = path.join(projectRoot, 'go-cmd');
+    fs.ensureDirSync(go);
+
+    await persistQueryScopes(workDir, [
+      { key: 'ts-root', sources: [projectRoot], archJson: archWith(9), kind: 'parsed' },
+      {
+        key: 'go-cmd',
+        sources: [go],
+        archJson: makeArchJson({ language: 'go' }),
+        kind: 'parsed',
+      },
+    ]);
+
+    const manifest = await readManifest(workDir);
+    // A TypeScript scope's entities cannot contain a Go scope's entities.
+    expect(entryOf(manifest, 'go-cmd')).not.toHaveProperty('parentScopeKey');
+  });
+
+  it('recomputes moved links on a merge pass instead of keeping a stale parent', async () => {
+    const { projectRoot, workDir, src, cli } = makeProjectTree();
+    const keyOf = (source: string) => hashSources([fs.realpathSync(source)], 'typescript');
+    const keys = { root: keyOf(projectRoot), src: keyOf(src), cli: keyOf(cli) };
+    const scopes = [
+      { key: keys.root, sources: [projectRoot], language: 'typescript' },
+      { key: keys.src, sources: [src], language: 'typescript' },
+      { key: keys.cli, sources: [cli], language: 'typescript' },
+    ];
+    fs.ensureDirSync(path.join(workDir, 'query'));
+    for (const scope of scopes) {
+      fs.ensureDirSync(path.join(workDir, 'query', scope.key));
+      fs.writeJsonSync(path.join(workDir, 'query', scope.key, 'arch.json'), makeArchJson());
+    }
+    // `cli` claims a parent that is no longer in the manifest.
+    fs.writeJsonSync(path.join(workDir, 'query', 'manifest.json'), {
+      version: '1.1',
+      generatedAt: new Date().toISOString(),
+      globalScopeKey: keys.root,
+      scopes: scopes.map((scope) => ({
+        ...scope,
+        label: `${path.basename(scope.sources[0])} (typescript)`,
+        kind: 'parsed',
+        entityCount: 1,
+        relationCount: 0,
+        hasAtlasExtension: false,
+        ...(scope.key === keys.cli ? { parentScopeKey: 'deadbeef' } : {}),
+      })),
+    });
+
+    await persistQueryScopes(workDir, []);
+
+    const manifest = await readManifest(workDir);
+    expect(entryOf(manifest, keys.cli)?.parentScopeKey).toBe(keys.src);
+    expect(entryOf(manifest, keys.src)?.parentScopeKey).toBe(keys.root);
+    expect(entryOf(manifest, keys.root)).not.toHaveProperty('parentScopeKey');
   });
 });
 

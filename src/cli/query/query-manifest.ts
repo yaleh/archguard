@@ -56,9 +56,21 @@ export type AuxArtifactsBlock = Partial<Record<AuxArtifactKind, AuxArtifactEntry
 // QueryManifest — persisted to .archguard/query-manifest.json
 // ---------------------------------------------------------------------------
 
+/**
+ * Current manifest schema version.
+ *
+ * - `1.0`: scopes carry no `parentScopeKey` (field never appears).
+ * - `1.1`: scopes may carry `parentScopeKey`; the field is still optional
+ *   because root and disjoint scopes legitimately have no parent.
+ */
+export const QUERY_MANIFEST_VERSION = '1.1';
+
+/** Manifest versions this reader understands. Unknown (newer) versions are also read. */
+export const SUPPORTED_QUERY_MANIFEST_VERSIONS = ['1.0', '1.1'] as const;
+
 export interface QueryManifest {
-  /** Schema version for forward compatibility. */
-  version: string; // "1.0"
+  /** Schema version for forward compatibility ("1.0" legacy, "1.1" adds parentScopeKey). */
+  version: string;
 
   /** ISO-8601 timestamp of when the manifest was generated. */
   generatedAt: string;

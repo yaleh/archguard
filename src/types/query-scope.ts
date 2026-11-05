@@ -40,6 +40,22 @@ export interface QueryScopeEntry {
   role?: 'primary' | 'secondary';
 
   /**
+   * Direct containing scope key, when one exists in the same manifest.
+   *
+   * A scope is the parent of another when every one of the child's `sources`
+   * (realpath-resolved) lies inside one of the parent's sources — a strict
+   * subset relation, computed among scopes of the same language. The link
+   * points at the *immediate* container (the smallest strict superset), so
+   * consumers that need the outermost scope walk the chain until the field is
+   * absent; no path heuristics are needed.
+   *
+   * Absent for root scopes (nothing contains them), for scopes whose sources
+   * are disjoint from every other scope, and in manifests written before
+   * schema version 1.1 (see `QUERY_MANIFEST_VERSION`).
+   */
+  parentScopeKey?: string;
+
+  /**
    * True when at least one of `sources` (realpath-resolved) lies outside the
    * project root, i.e. outside the directory that contains `.archguard`.
    *
