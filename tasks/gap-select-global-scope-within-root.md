@@ -1,7 +1,7 @@
 ---
 id: gap-select-global-scope-within-root
 title: selectGlobalScopeKey 无根内约束选中项目外 scope，且外来 scope 无标记（archguard 默认命中 quay 代码）
-status: todo
+status: ready
 labels:
   - gap
   - defect
