@@ -521,6 +521,167 @@ describe('persistQueryScopes', () => {
   });
 });
 
+describe('persistQueryScopes project-root scoping (outsideProjectRoot)', () => {
+  const readManifest = async (workDir: string) =>
+    fs.readJson(path.join(workDir, 'query', 'manifest.json'));
+  const entryOf = (manifest: { scopes: Array<{ key: string }> }, key: string) =>
+    manifest.scopes.find((scope) => scope.key === key) as
+      | { key: string; outsideProjectRoot?: boolean }
+      | undefined;
+
+  const archWith = (n: number) =>
+    makeArchJson({
+      entities: Array.from({ length: n }, (_, i) => ({
+        ...makeArchJson().entities[0],
+        id: `E${i}`,
+        name: `E${i}`,
+      })),
+      relations: [],
+    });
+
+  /** A project layout: `<project>/.archguard` plus an existing source dir. */
+  const makeProject = () => {
+    const projectRoot = makeTmpDir();
+    tmpDirs.push(projectRoot);
+    const workDir = path.join(projectRoot, '.archguard');
+    const src = path.join(projectRoot, 'src');
+    fs.ensureDirSync(src);
+    return { projectRoot, workDir, src };
+  };
+
+  /** An existing directory that is NOT inside the project root. */
+  const makeOutsideDir = (name = 'outside') => {
+    const dir = makeTmpDir();
+    tmpDirs.push(dir);
+    const target = path.join(dir, name);
+    fs.ensureDirSync(target);
+    return target;
+  };
+
+  it('marks an out-of-root scope and leaves the in-project scope unmarked', async () => {
+    const { workDir, src } = makeProject();
+    const outside = makeOutsideDir();
+
+    await persistQueryScopes(workDir, [
+      { key: 'in-project', sources: [src], archJson: archWith(3), kind: 'parsed' },
+      { key: 'out-of-project', sources: [outside], archJson: archWith(5000), kind: 'parsed' },
+    ]);
+
+    const manifest = await readManifest(workDir);
+    expect(entryOf(manifest, 'out-of-project')?.outsideProjectRoot).toBe(true);
+    expect(entryOf(manifest, 'in-project')).not.toHaveProperty('outsideProjectRoot');
+  });
+
+  it('resolves a symlink alias into the project root before judging it', async () => {
+    const { projectRoot, workDir, src } = makeProject();
+    const alias = path.join(projectRoot, 'src-alias');
+    fs.symlinkSync(src, alias);
+
+    await persistQueryScopes(workDir, [
+      { key: 'aliased-in-project', sources: [alias], archJson: archWith(2), kind: 'parsed' },
+    ]);
+
+    const manifest = await readManifest(workDir);
+    expect(entryOf(manifest, 'aliased-in-project')).not.toHaveProperty('outsideProjectRoot');
+  });
+
+  it('marks a symlink alias that resolves outside the project root', async () => {
+    const { projectRoot, workDir, src } = makeProject();
+    const outside = makeOutsideDir();
+    const alias = path.join(projectRoot, 'outside-alias');
+    fs.symlinkSync(outside, alias);
+
+    await persistQueryScopes(workDir, [
+      { key: 'in-project', sources: [src], archJson: archWith(3), kind: 'parsed' },
+      { key: 'aliased-outside', sources: [alias], archJson: archWith(9000), kind: 'parsed' },
+    ]);
+
+    const manifest = await readManifest(workDir);
+    expect(entryOf(manifest, 'aliased-outside')?.outsideProjectRoot).toBe(true);
+    expect(entryOf(manifest, 'in-project')).not.toHaveProperty('outsideProjectRoot');
+  });
+
+  it('never selects an out-of-root scope while an in-project parsed scope exists', async () => {
+    const { workDir, src } = makeProject();
+    const outside = makeOutsideDir();
+
+    await persistQueryScopes(workDir, [
+      { key: 'in-project', sources: [src], archJson: archWith(10), kind: 'parsed' },
+      { key: 'outside-wide', sources: [outside], archJson: archWith(4577), kind: 'parsed' },
+    ]);
+
+    const manifest = await readManifest(workDir);
+    expect(manifest.globalScopeKey).toBe('in-project');
+  });
+
+  it('keeps the original rule over the full set when the project root has no parsed scope', async () => {
+    const { workDir, src } = makeProject();
+    const outside = makeOutsideDir();
+
+    await persistQueryScopes(workDir, [
+      { key: 'in-project-derived', sources: [src], archJson: archWith(2), kind: 'derived' },
+      { key: 'outside-wide', sources: [outside], archJson: archWith(400), kind: 'parsed' },
+    ]);
+
+    const manifest = await readManifest(workDir);
+    // Legacy behaviour: no in-project parsed scope to anchor on, so the widest
+    // parsed scope of the whole set still wins instead of leaving a stale key.
+    expect(manifest.globalScopeKey).toBe('outside-wide');
+  });
+
+  it('loads a legacy manifest without outsideProjectRoot and re-derives the marker', async () => {
+    const { workDir, src } = makeProject();
+    const outside = makeOutsideDir();
+    const inKey = hashSources([fs.realpathSync(src)], 'typescript');
+    const outKey = hashSources([fs.realpathSync(outside)], 'typescript');
+    fs.ensureDirSync(path.join(workDir, 'query'));
+    for (const key of [inKey, outKey]) {
+      fs.ensureDirSync(path.join(workDir, 'query', key));
+      fs.writeJsonSync(path.join(workDir, 'query', key, 'arch.json'), archWith(1));
+    }
+    // Old manifest shape: no `outsideProjectRoot` field, and the global key
+    // pointing at the out-of-project scope (the bug being fixed).
+    fs.writeJsonSync(path.join(workDir, 'query', 'manifest.json'), {
+      version: '1.0',
+      generatedAt: new Date().toISOString(),
+      globalScopeKey: outKey,
+      scopes: [
+        {
+          key: inKey,
+          label: 'src (typescript)',
+          language: 'typescript',
+          kind: 'parsed',
+          sources: [src],
+          entityCount: 5,
+          relationCount: 0,
+          hasAtlasExtension: false,
+          generatedAt: new Date().toISOString(),
+        },
+        {
+          key: outKey,
+          label: 'outside (typescript)',
+          language: 'typescript',
+          kind: 'parsed',
+          sources: [outside],
+          entityCount: 5000,
+          relationCount: 0,
+          hasAtlasExtension: false,
+          generatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    // No new scopes: a pure merge/re-selection pass over the legacy manifest.
+    await persistQueryScopes(workDir, []);
+
+    const manifest = await readManifest(workDir);
+    expect(manifest.scopes).toHaveLength(2);
+    expect(entryOf(manifest, outKey)?.outsideProjectRoot).toBe(true);
+    expect(entryOf(manifest, inKey)).not.toHaveProperty('outsideProjectRoot');
+    expect(manifest.globalScopeKey).toBe(inKey);
+  });
+});
+
 describe('persistQueryScopes identity normalization', () => {
   const HEX_KEY = /^[0-9a-f]{8}$/;
 

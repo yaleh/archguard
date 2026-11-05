@@ -69,14 +69,48 @@ export function generateScopeLabel(sources: string[], language: string): string 
 // ---------------------------------------------------------------------------
 
 /**
+ * Resolve one source path the same way scope keys do (realpath when it exists),
+ * then report whether it lies outside `projectRoot`.
+ *
+ * Realpath resolution is what keeps symlink aliases (`/home/...` → `/data/...`)
+ * from being misjudged as outside the project.
+ */
+function isOutsideProjectRoot(source: string, projectRoot: string): boolean {
+  const absolute = path.isAbsolute(source) ? source : path.resolve(projectRoot, source);
+  const realSource = realpathOrSelf(absolute);
+  const realRoot = realpathOrSelf(projectRoot);
+  const relative = path.relative(realRoot, realSource);
+  if (relative === '') return false;
+  return relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
+}
+
+/**
+ * Whether any of a scope's sources (realpath-resolved) lies outside the project
+ * root — i.e. outside the directory containing `.archguard`.
+ */
+export function hasSourceOutsideProjectRoot(sources: string[], projectRoot: string): boolean {
+  return sources.some((source) => isOutsideProjectRoot(source, projectRoot));
+}
+
+/** Set or clear `outsideProjectRoot` on an entry, keeping in-project entries unmarked. */
+function withOutsideProjectRoot(entry: QueryScopeEntry, projectRoot: string): QueryScopeEntry {
+  if (hasSourceOutsideProjectRoot(entry.sources, projectRoot)) {
+    return { ...entry, outsideProjectRoot: true };
+  }
+  const { outsideProjectRoot: _ignored, ...rest } = entry;
+  return rest;
+}
+
+/**
  * Build a single `QueryScopeEntry` from a `QueryScopeInput`.
  *
  * Extracts entity/relation counts from the ArchJSON and checks for
- * the Go Atlas extension.
+ * the Go Atlas extension. When `projectRoot` is given, the entry is marked
+ * `outsideProjectRoot: true` if any source resolves outside it.
  */
-export function buildManifestEntry(scope: QueryScopeInput): QueryScopeEntry {
+export function buildManifestEntry(scope: QueryScopeInput, projectRoot?: string): QueryScopeEntry {
   const { archJson } = scope;
-  return {
+  const entry: QueryScopeEntry = {
     key: scope.key,
     label: generateScopeLabel(scope.sources, archJson.language),
     language: archJson.language,
@@ -88,14 +122,30 @@ export function buildManifestEntry(scope: QueryScopeInput): QueryScopeEntry {
     generatedAt: new Date().toISOString(),
     ...(scope.role ? { role: scope.role } : {}),
   };
+  return projectRoot ? withOutsideProjectRoot(entry, projectRoot) : entry;
 }
 
+/**
+ * Pick the manifest's global scope.
+ *
+ * Scopes marked `outsideProjectRoot` are excluded whenever the project itself
+ * has a parsed scope — an artefact left behind by analysing (`-s /other/path`)
+ * or by a fixture written into the same output directory must never become the
+ * default scope of the project that owns `.archguard`, no matter how many
+ * entities it has. When the project root holds no parsed scope at all, the
+ * original rule over the full set is kept so a legitimate manifest (e.g. a
+ * single-language repo whose only scope is derived, or a nested output dir)
+ * still gets a global key.
+ */
 function selectGlobalScopeKey(entries: QueryScopeEntry[]): string | undefined {
   if (entries.length === 0) return undefined;
   if (entries.length === 1) return entries[0].key;
 
-  const parsed = entries.filter((entry) => entry.kind === 'parsed');
-  const candidates = parsed.length > 0 ? parsed : entries;
+  const withinRoot = entries.filter((entry) => entry.outsideProjectRoot !== true);
+  const withinRootParsed = withinRoot.filter((entry) => entry.kind === 'parsed');
+  const scopePool = withinRootParsed.length > 0 ? withinRoot : entries;
+  const parsed = scopePool.filter((entry) => entry.kind === 'parsed');
+  const candidates = parsed.length > 0 ? parsed : scopePool;
   return candidates.reduce((best, current) => {
     if (current.entityCount !== best.entityCount) {
       return current.entityCount > best.entityCount ? current : best;
@@ -156,7 +206,10 @@ async function normalizeManifestEntry(
 
   const key = hashSources(canonicalSources, entry.language);
   return {
-    entry: { ...entry, key, sources: canonicalSources },
+    // Re-derive the in/out-of-root marker from the resolved sources so legacy
+    // manifests (written before the field existed) and moved/aliased routes get
+    // the same verdict a fresh analysis would compute.
+    entry: withOutsideProjectRoot({ ...entry, key, sources: canonicalSources }, projectRoot),
     previousKey: entry.key,
   };
 }
@@ -367,6 +420,12 @@ export async function persistQueryScopes(
   const queryDir = path.join(resolvedDir, 'query');
   await fs.ensureDir(queryDir);
 
+  // The project root is the directory that owns `.archguard`. Scopes whose
+  // sources resolve outside it (analysing another project into the same output
+  // dir, fixture leftovers) are still registered, but marked so the global
+  // scope selection can keep its default pointed at this project.
+  const projectRoot = path.dirname(path.resolve(resolvedDir));
+
   const writtenEntries: QueryScopeEntry[] = [];
 
   for (const scope of scopes) {
@@ -385,7 +444,9 @@ export async function persistQueryScopes(
       const indexPath = path.join(scopeDir, 'arch-index.json');
       await atomicWriteFile(indexPath, JSON.stringify(archIndex, null, 2));
 
-      writtenEntries.push(buildManifestEntry({ ...scope, archJson: canonicalArchJson }));
+      writtenEntries.push(
+        buildManifestEntry({ ...scope, archJson: canonicalArchJson }, projectRoot)
+      );
     } catch (err) {
       // Log warning but continue with remaining scopes
       const message = err instanceof Error ? err.message : String(err);
@@ -405,7 +466,6 @@ export async function persistQueryScopes(
   // route, a symlinked route and the current absolute route; normalizing makes
   // those collapse onto the key a fresh analysis would compute, so re-analysis
   // replaces instead of accumulating.
-  const projectRoot = path.dirname(path.resolve(resolvedDir));
   const identities = new Map<string, MergedIdentity>();
   for (const entry of existingManifest?.scopes ?? []) {
     const normalized = await normalizeManifestEntry(entry, projectRoot);
