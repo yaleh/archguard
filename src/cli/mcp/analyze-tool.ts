@@ -34,7 +34,10 @@ const analyzeSchema = {
     .array(z.string())
     .optional()
     .describe(
-      'Source paths relative to the target project root. Omit to analyze the project root.'
+      'Source paths relative to the target project root. Omit to analyze the project root. ' +
+        'Each source becomes an independent query scope: dependency edges are complete within ' +
+        'a scope, but cross-scope edges are not visible (neither scope records them). ' +
+        'To see edges between directories, pass a common parent root (or a single root) as one source instead.'
     ),
   lang: z
     .enum(supportedAnalyzeLanguages)
