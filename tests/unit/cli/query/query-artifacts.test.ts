@@ -7,9 +7,9 @@ import {
   atomicWriteFile,
   generateScopeLabel,
   buildManifestEntry,
-  isPathInside,
   persistQueryScopes,
 } from '@/cli/query/query-artifacts.js';
+import { isPathInside } from '@/cli/query/scope-containment.js';
 import type { QueryScopeInput } from '@/cli/query/query-artifacts.js';
 import { QUERY_MANIFEST_VERSION } from '@/cli/query/query-manifest.js';
 import { hashSources } from '@/cli/processors/arch-json-utils.js';
