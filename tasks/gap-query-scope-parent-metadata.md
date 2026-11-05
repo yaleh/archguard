@@ -54,6 +54,7 @@ extra:
   - 消费方 walk 实测：`ae4141d5(cli) -> 465376a8(src) -> 8f71319d(archguard)`，缺字段处即链顶，无路径启发式。
   - 其他真实链同样成立：`quay` 的 `packages`/`orchestration`/`scripts`/`plugin` → `b4f87b21`；`claudecodeui` 的 `shared`/`modules` → `93e0a992`；baseline 的 `packages` → `b79ff7aa`。
   - 缺席对照：根 scope `8f71319d`、同源不同语言的 `056a3f39`(cpp) / `289f1f93`(kotlin) 均无 parentScopeKey（包含关系只在同一语言内成立）。
+- Hygiene ratchet：新增 parentScopeKey 逻辑曾使 `query-artifacts.ts` 667→812 行越过 800 行上限（suite red：`oversizeFiles src/cli/query/query-artifacts.ts 基线外→812`）。已将 containment 辅助函数抽到 `src/cli/query/scope-containment.ts`，`query-artifacts.ts` 回到 683 行；`tests/unit/architecture/hygiene-ratchet-census.test.ts` 8 tests 全绿，行为不变（scoped 4 文件 / 83 tests 通过，`npm run type-check` 通过）。
 
 ## ADR-007 暗轴记录
 
@@ -66,6 +67,15 @@ extra:
 - src/cli/query/query-artifacts.ts
 - src/cli/query/query-manifest.ts
 - src/cli/query/engine-loader.ts
+- src/cli/query/scope-containment.ts
 - tests/unit/cli/query/query-artifacts.test.ts
 - tests/unit/cli/query/query-manifest.test.ts
 - tests/unit/cli/query/engine-loader.test.ts
+
+## Blocker
+
+**2026-11-05T16:08:32.578Z — worker 未落地（exited-not-landed）**
+
+- 未落地原因：step=suite: suite red
+- run_id：wk-prod-anchor
+- session_id：f1ec3bd8-3f5a-45b2-b3a4-9fdcb94e67f5
